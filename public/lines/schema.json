@@ -1,0 +1,37 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "system": {
+            "description": "The name of the transit system",
+            "type": "string"
+        },
+        "name": {
+            "description": "The name of the line",
+            "type": "string"
+        },
+        "color": {
+            "description": "The color of the line in hex format",
+            "type": "string"
+        },
+        "stations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            }
+        }
+    },
+    "required": [
+        "system",
+        "name",
+        "stations"
+    ]
+}

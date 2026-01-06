@@ -1,0 +1,87 @@
+{
+    "$schema": "./schema.json",
+    "system": "Munich U-Bahn",
+    "name": "U6",
+    "color": "#0065ae",
+    "font": "google-fonts:Manrope:wght@200..800",
+    "stations": [
+        {
+            "name": "Garching-Forschungszentrum"
+        },
+        {
+            "name": "Garching"
+        },
+        {
+            "name": "Garching-Hochbrück"
+        },
+        {
+            "name": "Fröttmaning"
+        },
+        {
+            "name": "Kieferngarten"
+        },
+        {
+            "name": "Freimann"
+        },
+        {
+            "name": "Studentenstadt"
+        },
+        {
+            "name": "Alte Heide"
+        },
+        {
+            "name": "Nordfriedhof"
+        },
+        {
+            "name": "Dietlindenstraße"
+        },
+        {
+            "name": "Münchner Freiheit"
+        },
+        {
+            "name": "Giselastraße"
+        },
+        {
+            "name": "Universität"
+        },
+        {
+            "name": "Odeonsplatz"
+        },
+        {
+            "name": "Marienplatz"
+        },
+        {
+            "name": "Sendlinger Tor"
+        },
+        {
+            "name": "Goetheplatz"
+        },
+        {
+            "name": "Poccistraße"
+        },
+        {
+            "name": "Implerstraße"
+        },
+        {
+            "name": "Harras"
+        },
+        {
+            "name": "Partnachplatz"
+        },
+        {
+            "name": "Westpark"
+        },
+        {
+            "name": "Holzapfelkreuth"
+        },
+        {
+            "name": "Haderner Stern"
+        },
+        {
+            "name": "Großhadern"
+        },
+        {
+            "name": "Klinikum Großhadern"
+        }
+    ]
+}

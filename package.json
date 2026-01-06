@@ -16,8 +16,11 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "axios": "^1.13.2",
     "pinia": "^3.0.4",
-    "vue": "^3.5.26"
+    "uuid": "^13.0.0",
+    "vue": "^3.5.26",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.3",
