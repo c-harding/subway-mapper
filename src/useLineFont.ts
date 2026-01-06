@@ -48,10 +48,10 @@ function getLineFont(line: Line, onCleanup: OnCleanup): string | undefined {
     const fontSpec = line.font.url.replace('google-fonts:', '');
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?display=swap&family=${encodeURIComponent(fontSpec)}`;
+    link.href = `https://fonts.googleapis.com/css2?display=swap&family=${encodeURIComponent(fontSpec.replaceAll(' ', '+'))}`;
     document.head.appendChild(link);
     onCleanup(() => document.head.removeChild(link));
-    return fontSpec.split(':', 1)[0];
+    return fontSpec.split(':', 1)[0]?.replaceAll('+', ' ');
   } else if (line.font?.url.startsWith('browser:')) {
     return line.font.url.replace('browser:', '');
   } else if (line.font?.url.startsWith('./')) {

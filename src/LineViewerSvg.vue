@@ -3,6 +3,7 @@ import { useLineFont } from './useLineFont';
 import type { Line, Station } from './model';
 import { computed, useTemplateRef } from 'vue';
 import { computedAsync } from '@vueuse/core';
+import { Box, Point, type RangedPoint } from './Point';
 
 const { line } = defineProps<{
   line: Line;
@@ -14,41 +15,53 @@ const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), f
 
 const svg = useTemplateRef<SVGSVGElement>('svg');
 
-const minStationSpace = 10;
-const minStationLabelSpace = 10;
-const lineWidth = 4;
-const stationCircleRadius = 3;
-const stationCircleStroke = 1;
-const stationLabelOffset = 10;
-const stationLabelFontSize = 6;
-const padding = 10;
+const minStationSpace = 32;
+const minStationLabelSpace = 15;
+const lineWidth = 10;
+const stationCircleRadius = 6;
+const stationCircleStroke = 3;
+const stationLabelOffset = 11;
+const stationLabelFontSize = 30;
+const stationLabelFontWeight = 600;
+const padding = 50;
 
 const totalStationWidth = Math.max(lineWidth, stationCircleRadius * 2 + stationCircleStroke * 2);
 const totalStationHeight = Math.max(lineWidth, stationCircleRadius * 2 + stationCircleStroke * 2);
 
-function StationCircle(props: { cx: number; cy: number; color: string }) {
-  return (
-    <circle
-      cx={props.cx}
-      cy={props.cy}
-      r={stationCircleRadius}
-      fill="white"
-      stroke="black"
-      stroke-width={stationCircleStroke}
-    />
-  );
+function StationCircleFill(props: { cx: number; cy: number; color: string }) {
+  const r = stationCircleRadius;
+  return <circle cx={props.cx} cy={props.cy} r={r} fill="white" />;
 }
 
-function StationLabel(props: { x: number; y: number; name: string; align: 'left' | 'right' }) {
+function StationCircleLine(props: { cx: number; cy: number; color: string }) {
+  const r = stationCircleRadius + stationCircleStroke;
+  return <circle cx={props.cx} cy={props.cy} r={r} fill="black" />;
+}
+
+function labelStyles(
+  props: {
+    textAnchor?: 'start' | 'middle' | 'end';
+    dominantBaseline?: 'middle' | 'text-top';
+  } = {},
+) {
+  return {
+    fontFamily: fontFamily.value,
+    fontSize: `${stationLabelFontSize}px`,
+    fontWeight: stationLabelFontWeight,
+    textAnchor: props.textAnchor ?? 'start',
+    dominantBaseline: props.dominantBaseline ?? 'middle',
+  };
+}
+
+function StationLabel(props: {
+  x: number;
+  y: number;
+  name: string;
+  textAnchor?: 'start' | 'middle' | 'end';
+  dominantBaseline?: 'middle' | 'text-top';
+}) {
   return (
-    <text
-      x={props.x}
-      y={props.y}
-      font-family={fontFamily.value}
-      font-size={stationLabelFontSize}
-      text-anchor={props.align === 'left' ? 'end' : 'start'}
-      dominant-baseline="central"
-    >
+    <text x={props.x} y={props.y} style={labelStyles(props)}>
       {props.name}
     </text>
   );
@@ -59,10 +72,7 @@ function bboxText(svg: SVGSVGElement, text: string) {
   const data = document.createTextNode(text);
 
   const textElement = document.createElementNS(svgns, 'text');
-  textElement.setAttribute('text-anchor', 'start');
-  textElement.setAttribute('dominant-baseline', 'central');
-  if (fontFamily.value) textElement.setAttribute('font-family', fontFamily.value);
-  textElement.setAttribute('width', '10px');
+  Object.assign(textElement.style, labelStyles());
 
   textElement.appendChild(data);
 
@@ -75,9 +85,6 @@ function bboxText(svg: SVGSVGElement, text: string) {
   return bbox;
 }
 
-type XY = { x: number; y: number };
-type RangedXY = XY & { minX: number; maxX: number; minY: number; maxY: number };
-
 const svgProps = computed(() => {
   if (!svg.value || !fontsLoaded.value) {
     return { positions: [] };
@@ -85,13 +92,12 @@ const svgProps = computed(() => {
 
   let positions: {
     station: Station;
-    marker: RangedXY;
-    label: RangedXY;
+    marker: RangedPoint;
+    label: RangedPoint;
   }[] = [];
 
   for (const station of line.stations) {
     const bbox = bboxText(svg.value, station.name);
-    const end: XY = { x: bbox.x + bbox.width, y: bbox.y + bbox.height };
 
     let nextStationY: number;
     const lastStation = positions.at(-1);
@@ -99,49 +105,28 @@ const svgProps = computed(() => {
       nextStationY = 0;
     } else {
       nextStationY = Math.max(
-        lastStation.marker.y + minStationSpace,
-        lastStation.label.maxY + minStationLabelSpace + bbox.y,
+        lastStation.marker.max.y + minStationSpace + totalStationHeight / 2,
+        lastStation.label.max.y + minStationLabelSpace - bbox.y,
       );
     }
 
-    const marker: RangedXY = {
-      x: 0,
-      y: nextStationY,
-      minX: -totalStationWidth / 2,
-      maxX: totalStationWidth / 2,
-      minY: nextStationY - totalStationHeight / 2,
-      maxY: nextStationY + totalStationHeight / 2,
-    };
+    const marker = new Point({ x: 0, y: nextStationY }).withSize({
+      width: totalStationWidth,
+      height: totalStationHeight,
+    });
 
-    const labelPositionX = marker.x + stationLabelOffset;
+    const label = new Point({ x: marker.x + stationLabelOffset, y: nextStationY }).withSizeFromBox(
+      bbox,
+    );
 
     positions.push({
       station,
       marker,
-      label: {
-        x: labelPositionX,
-        y: nextStationY,
-        minX: labelPositionX + bbox.x,
-        maxX: labelPositionX + end.x,
-        minY: nextStationY + bbox.y,
-        maxY: nextStationY + end.y,
-      },
+      label,
     });
   }
 
-  const bounds = positions.reduce(
-    (acc, pos) => {
-      acc.min.x = Math.min(acc.min.x, pos.marker.minX, pos.label.minX);
-      acc.max.x = Math.max(acc.max.x, pos.marker.maxX, pos.label.maxX);
-      acc.min.y = Math.min(acc.min.y, pos.marker.minY, pos.label.minY);
-      acc.max.y = Math.max(acc.max.y, pos.marker.maxY, pos.label.maxY);
-      return acc;
-    },
-    {
-      min: { x: Infinity, y: Infinity },
-      max: { x: -Infinity, y: -Infinity },
-    },
-  );
+  const bounds = Box.bounds(positions.flatMap((pos) => [pos.marker, pos.label]));
 
   return { positions, bounds };
 });
@@ -152,12 +137,9 @@ const viewBox = computed(() => {
     return undefined;
   }
 
-  return [
-    bounds.min.x - padding,
-    bounds.min.y - padding,
-    bounds.max.x - bounds.min.x + padding * 2,
-    bounds.max.y - bounds.min.y + padding * 2,
-  ].join(' ');
+  const padded = bounds.withPadding(padding);
+
+  return `${padded.min.x} ${padded.min.y} ${padded.width} ${padded.height}`;
 });
 
 const polylinePoints = computed(() =>
@@ -176,7 +158,14 @@ const polylinePoints = computed(() =>
       />
     </g>
     <g id="station-markers">
-      <StationCircle
+      <StationCircleLine
+        v-for="pos in svgProps.positions"
+        :key="pos.station.name"
+        :cx="pos.marker.x"
+        :cy="pos.marker.y"
+        :color="line.color"
+      />
+      <StationCircleFill
         v-for="pos in svgProps.positions"
         :key="pos.station.name"
         :cx="pos.marker.x"

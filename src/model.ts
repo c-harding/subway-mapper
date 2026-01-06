@@ -1,8 +1,14 @@
 import * as z from 'zod';
 
-export const Station = z.object({
+export const StationObject = z.object({
   name: z.string(),
 });
+export type StationObject = z.infer<typeof StationObject>;
+
+export const Station = z.union([
+  StationObject,
+  z.string().transform((str): StationObject => ({ name: str })),
+]);
 export type Station = z.infer<typeof Station>;
 
 export const FontReference = z.object({

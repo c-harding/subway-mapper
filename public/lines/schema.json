@@ -17,7 +17,10 @@
         "stations": {
             "type": "array",
             "items": {
-                "type": "object",
+                "type": [
+                    "object",
+                    "string"
+                ],
                 "properties": {
                     "name": {
                         "type": "string"
