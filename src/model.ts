@@ -17,13 +17,22 @@ export const Line = z.object({
     .union([
       z
         .string()
-        .startsWith('google-fonts:', `Font references must start with 'google-fonts:'`)
+        .startsWith('google-fonts:', `Font references must start with 'google-fonts: or browser:'`)
         .transform((str) => {
           return {
             url: str,
           } as FontReference;
         })
         .describe('Google Fonts reference, starting with "google-fonts:"'),
+      z
+        .string()
+        .startsWith('browser:', `Font references must start with 'google-fonts: or browser:'`)
+        .transform((str) => {
+          return {
+            url: str,
+          } as FontReference;
+        })
+        .describe('Browser font reference, starting with "browser:"'),
       FontReference,
     ])
     .optional(),
