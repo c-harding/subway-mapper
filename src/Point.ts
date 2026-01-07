@@ -58,8 +58,41 @@ export class Point {
     });
   }
 
+  offset(dx: number, dy: number): Point;
+  offset(props: PointOffsetLike): Point;
+  offset(...args: [number, number] | [PointOffsetLike]): Point {
+    const [dx, dy] = args.length === 1 ? [args[0].dx ?? 0, args[0].dy ?? 0] : args;
+    return new Point(this.x + dx, this.y + dy);
+  }
+
   toBox(): Box {
     return new Box(this, this);
+  }
+}
+
+export interface PointOffsetLike {
+  dx?: number;
+  dy?: number;
+}
+
+export class PointOffset implements PointOffsetLike {
+  readonly dx: number;
+  readonly dy: number;
+
+  constructor(dx: number, dy: number);
+  constructor(props: PointOffsetLike);
+  constructor(...args: [number, number] | [PointOffsetLike]) {
+    if (args.length === 1) {
+      this.dx = args[0].dx ?? 0;
+      this.dy = args[0].dy ?? 0;
+    } else {
+      this.dx = args[0];
+      this.dy = args[1];
+    }
+  }
+
+  scale(factor: number): PointOffset {
+    return new PointOffset(this.dx * factor, this.dy * factor);
   }
 }
 
@@ -119,6 +152,57 @@ export class Box {
       maxY: this.max.y + paddingY,
     });
   }
+
+  /**
+   * Get the distance Box B must be moved in order to no longer overlap Box A.
+   *
+   * The movement is in the direction of the given offset,
+   * and the return value is a scaling factor to apply to that offset.
+   * This scaling factor is zero if the boxes do not overlap, or positive otherwise.
+   *
+   * Note that offset itself may be negative in either or both dimensions.
+   * This indicates that the boxes should be moved upwards or leftwards to separate them.
+   *
+   * If padding is provided, the boxes are considered to be larger by that amount in each dimension.
+   */
+  static separationFactor(
+    oldBox: Box,
+    newBox: Box,
+    offset: PointOffsetLike,
+    padding?: number | { x?: number; y?: number },
+  ): number {
+    let paddedOldBox: Box;
+    if (typeof padding === 'number') {
+      paddedOldBox = oldBox.withPadding(padding);
+    } else if (padding) {
+      paddedOldBox = oldBox.withPadding(padding.x ?? 0, padding.y ?? 0);
+    } else {
+      paddedOldBox = oldBox;
+    }
+
+    if (
+      paddedOldBox.max.x <= newBox.min.x ||
+      newBox.max.x <= paddedOldBox.min.x ||
+      paddedOldBox.max.y <= newBox.min.y ||
+      newBox.max.y <= paddedOldBox.min.y
+    ) {
+      return 0;
+    }
+
+    const factorX = !offset.dx
+      ? Infinity
+      : Math.max(
+          (paddedOldBox.max.x - newBox.min.x) / offset.dx,
+          (newBox.max.x - paddedOldBox.min.x) / -offset.dx,
+        );
+    const factorY = !offset.dy
+      ? Infinity
+      : Math.max(
+          (paddedOldBox.max.y - newBox.min.y) / offset.dy,
+          (newBox.max.y - paddedOldBox.min.y) / -offset.dy,
+        );
+    return Math.min(factorX, factorY);
+  }
 }
 
 class RangedPoint extends Point implements Box {
@@ -163,6 +247,20 @@ class RangedPoint extends Point implements Box {
   withPadding(paddingX: number, paddingY: number): Box;
   withPadding(paddingX: number, paddingY = paddingX): Box {
     return this.withBox(this.box.withPadding(paddingX, paddingY));
+  }
+
+  override offset(dx: number, dy: number): RangedPoint;
+  override offset(props: { dx?: number; dy?: number }): RangedPoint;
+  override offset(...args: [number, number] | [{ dx?: number; dy?: number }]): RangedPoint {
+    const [dx, dy] = args.length === 1 ? [args[0].dx ?? 0, args[0].dy ?? 0] : args;
+    return new RangedPoint({
+      x: this.x + dx,
+      y: this.y + dy,
+      minX: this.min.x + dx,
+      minY: this.min.y + dy,
+      maxX: this.max.x + dx,
+      maxY: this.max.y + dy,
+    });
   }
 }
 

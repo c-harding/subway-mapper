@@ -1,13 +1,36 @@
-<script setup lang="tsx">
+<script setup lang="ts">
 import { useLineFont } from './useLineFont';
-import type { Line, Station } from './model';
+import type { Line } from './model';
 import { computed, useTemplateRef } from 'vue';
 import { computedAsync } from '@vueuse/core';
-import { Box, Point, type RangedPoint } from './Point';
+import { Box } from './Point';
+import type { MapConfig } from './config';
+import { type LayoutStrategy, type StationPosition } from './layout-strategy';
 
-const { line } = defineProps<{
+const { line, layoutStrategy } = defineProps<{
   line: Line;
+  layoutStrategy: LayoutStrategy;
 }>();
+
+const mapConfig: MapConfig = {
+  padding: 10,
+  spacing: {
+    marker: 32,
+    label: 15,
+  },
+  gap: {
+    markerLabel: 2,
+  },
+  lineWidth: 10,
+  marker: {
+    radius: 6,
+    strokeWidth: 3,
+  },
+  label: {
+    fontSize: 30,
+    fontWeight: 600,
+  },
+};
 
 const fontFamily = useLineFont(line);
 
@@ -15,64 +38,26 @@ const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), f
 
 const svg = useTemplateRef<SVGSVGElement>('svg');
 
-const minStationSpace = 32;
-const minStationLabelSpace = 15;
-const lineWidth = 10;
-const stationCircleRadius = 6;
-const stationCircleStroke = 3;
-const stationLabelOffset = 11;
-const stationLabelFontSize = 30;
-const stationLabelFontWeight = 600;
-const padding = 50;
-
-const totalStationWidth = Math.max(lineWidth, stationCircleRadius * 2 + stationCircleStroke * 2);
-const totalStationHeight = Math.max(lineWidth, stationCircleRadius * 2 + stationCircleStroke * 2);
-
-function StationCircleFill(props: { cx: number; cy: number; color: string }) {
-  const r = stationCircleRadius;
-  return <circle cx={props.cx} cy={props.cy} r={r} fill="white" />;
-}
-
-function StationCircleLine(props: { cx: number; cy: number; color: string }) {
-  const r = stationCircleRadius + stationCircleStroke;
-  return <circle cx={props.cx} cy={props.cy} r={r} fill="black" />;
-}
-
-function labelStyles(
-  props: {
-    textAnchor?: 'start' | 'middle' | 'end';
-    dominantBaseline?: 'middle' | 'text-top';
-  } = {},
-) {
+function labelStyles(props?: { textAnchor?: 'start' | 'middle' | 'end' }) {
   return {
     fontFamily: fontFamily.value,
-    fontSize: `${stationLabelFontSize}px`,
-    fontWeight: stationLabelFontWeight,
-    textAnchor: props.textAnchor ?? 'start',
-    dominantBaseline: props.dominantBaseline ?? 'middle',
-  };
+    fontSize: `${mapConfig.label.fontSize}px`,
+    fontWeight: mapConfig.label.fontWeight,
+    textAnchor: props?.textAnchor ?? 'middle',
+    dominantBaseline: 'middle',
+  } as const;
 }
 
-function StationLabel(props: {
-  x: number;
-  y: number;
-  name: string;
-  textAnchor?: 'start' | 'middle' | 'end';
-  dominantBaseline?: 'middle' | 'text-top';
-}) {
-  return (
-    <text x={props.x} y={props.y} style={labelStyles(props)}>
-      {props.name}
-    </text>
-  );
-}
-
-function bboxText(svg: SVGSVGElement, text: string) {
+function bboxText(
+  svg: SVGSVGElement,
+  text: string,
+  props?: { textAnchor?: 'start' | 'middle' | 'end' },
+) {
   const svgns = 'http://www.w3.org/2000/svg';
   const data = document.createTextNode(text);
 
   const textElement = document.createElementNS(svgns, 'text');
-  Object.assign(textElement.style, labelStyles());
+  Object.assign(textElement.style, labelStyles({ textAnchor: props?.textAnchor }));
 
   textElement.appendChild(data);
 
@@ -90,40 +75,15 @@ const svgProps = computed(() => {
     return { positions: [] };
   }
 
-  let positions: {
-    station: Station;
-    marker: RangedPoint;
-    label: RangedPoint;
-  }[] = [];
+  let positions: StationPosition[] = [];
 
   for (const station of line.stations) {
-    const bbox = bboxText(svg.value, station.name);
-
-    let nextStationY: number;
-    const lastStation = positions.at(-1);
-    if (!lastStation) {
-      nextStationY = 0;
-    } else {
-      nextStationY = Math.max(
-        lastStation.marker.max.y + minStationSpace + totalStationHeight / 2,
-        lastStation.label.max.y + minStationLabelSpace - bbox.y,
-      );
-    }
-
-    const marker = new Point({ x: 0, y: nextStationY }).withSize({
-      width: totalStationWidth,
-      height: totalStationHeight,
-    });
-
-    const label = new Point({ x: marker.x + stationLabelOffset, y: nextStationY }).withSizeFromBox(
-      bbox,
+    const svgElement = svg.value;
+    positions.push(
+      layoutStrategy.nextPosition(positions.at(-1), station, mapConfig, (props) =>
+        bboxText(svgElement, station.name, { textAnchor: props?.textAnchor }),
+      ),
     );
-
-    positions.push({
-      station,
-      marker,
-      label,
-    });
   }
 
   const bounds = Box.bounds(positions.flatMap((pos) => [pos.marker, pos.label]));
@@ -137,7 +97,7 @@ const viewBox = computed(() => {
     return undefined;
   }
 
-  const padded = bounds.withPadding(padding);
+  const padded = bounds.withPadding(mapConfig.padding);
 
   return `${padded.min.x} ${padded.min.y} ${padded.width} ${padded.height}`;
 });
@@ -152,43 +112,40 @@ const polylinePoints = computed(() =>
       <polyline
         :points="polylinePoints"
         :stroke="line.color"
-        :stroke-width="lineWidth"
+        :stroke-width="mapConfig.lineWidth"
         stroke-linecap="round"
         fill="none"
       />
     </g>
     <g id="station-markers">
-      <StationCircleLine
+      <circle
         v-for="pos in svgProps.positions"
         :key="pos.station.name"
         :cx="pos.marker.x"
         :cy="pos.marker.y"
-        :color="line.color"
+        :r="mapConfig.marker.radius + mapConfig.marker.strokeWidth"
+        fill="black"
       />
-      <StationCircleFill
+      <circle
         v-for="pos in svgProps.positions"
         :key="pos.station.name"
         :cx="pos.marker.x"
         :cy="pos.marker.y"
-        :color="line.color"
+        :r="mapConfig.marker.radius"
+        fill="white"
       />
     </g>
     <g id="station-labels">
-      <StationLabel
+      <text
         v-for="pos in svgProps.positions"
         :key="pos.station.name"
         :x="pos.label.x"
         :y="pos.label.y"
         :name="pos.station.name"
-      />
+        :style="labelStyles({ textAnchor: pos.textAnchor })"
+      >
+        {{ pos.station.name }}
+      </text>
     </g>
   </svg>
 </template>
-
-<style module>
-.lineViewer {
-  ul > li::marker {
-    color: v-bind('line.color');
-  }
-}
-</style>
