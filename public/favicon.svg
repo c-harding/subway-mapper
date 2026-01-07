@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg viewBox="-15 -15 30 30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <g id="lines-background">
+        <polyline points="0,-50 0,50" stroke="white" stroke-width="16" stroke-linecap="butt" fill="none">
+        </polyline>
+    </g>
+    <g id="station-markers-background">
+        <circle cx="0" cy="0" r="12" fill="white" />
+    </g>
+    <g id="lines">
+        <polyline points="0,-50 0,50" stroke="#0065ae" stroke-width="10" stroke-linecap="round" fill="none"/>
+    </g>
+    <g id="station-markers-line">
+        <circle cx="0" cy="0" r="9" fill="black" />
+    </g>
+    <g id="station-markers-fill">
+        <circle cx="0" cy="0" r="6" fill="white" />
+    </g>
+</svg>

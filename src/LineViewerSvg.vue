@@ -111,6 +111,25 @@ const polylinePoints = computed(() =>
 </script>
 <template>
   <svg ref="svg" :viewBox>
+    <g id="lines-background">
+      <polyline
+        :points="polylinePoints"
+        stroke="white"
+        :stroke-width="mapConfig.lineWidth + mapConfig.marker.strokeWidth * 2"
+        stroke-linecap="butt"
+        fill="none"
+      />
+    </g>
+    <g id="station-markers-background">
+      <circle
+        v-for="pos in svgProps.positions"
+        :key="pos.station.name"
+        :cx="pos.marker.x"
+        :cy="pos.marker.y"
+        :r="mapConfig.marker.radius + mapConfig.marker.strokeWidth * 2"
+        fill="white"
+      />
+    </g>
     <g id="lines">
       <polyline
         :points="polylinePoints"
@@ -120,7 +139,7 @@ const polylinePoints = computed(() =>
         fill="none"
       />
     </g>
-    <g id="station-markers">
+    <g id="station-markers-line">
       <circle
         v-for="pos in svgProps.positions"
         :key="pos.station.name"
@@ -129,6 +148,8 @@ const polylinePoints = computed(() =>
         :r="mapConfig.marker.radius + mapConfig.marker.strokeWidth"
         fill="black"
       />
+    </g>
+    <g id="station-markers-fill">
       <circle
         v-for="pos in svgProps.positions"
         :key="pos.station.name"
@@ -145,7 +166,12 @@ const polylinePoints = computed(() =>
         :x="pos.label.x"
         :y="pos.label.y"
         :name="pos.station.name"
-        :style="labelStyles({ textAnchor: pos.textAnchor, fontWeight: pos.station.terminus ? 700 : undefined })"
+        :style="
+          labelStyles({
+            textAnchor: pos.textAnchor,
+            fontWeight: pos.station.terminus ? 700 : undefined,
+          })
+        "
       >
         {{ pos.station.name }}
       </text>
