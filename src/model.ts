@@ -5,11 +5,15 @@ export const StationObject = z.object({
 });
 export type StationObject = z.infer<typeof StationObject>;
 
-export const Station = z.union([
+const RawStation = z.union([
   StationObject,
   z.string().transform((str): StationObject => ({ name: str })),
 ]);
-export type Station = z.infer<typeof Station>;
+type RawStation = z.infer<typeof RawStation>;
+
+export type Station = RawStation & {
+  terminus: boolean;
+};
 
 export const FontReference = z.object({
   family: z.string().optional().describe('Font family name'),
@@ -44,6 +48,11 @@ export const Line = z.object({
     .optional(),
   name: z.string(),
   color: z.string(),
-  stations: z.array(Station),
+  stations: z.array(RawStation).transform((stations) =>
+    stations.map<Station>((station, i) => ({
+      ...station,
+      terminus: i === 0 || i === stations.length - 1,
+    })),
+  ),
 });
 export type Line = z.infer<typeof Line>;

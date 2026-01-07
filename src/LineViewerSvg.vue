@@ -38,11 +38,11 @@ const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), f
 
 const svg = useTemplateRef<SVGSVGElement>('svg');
 
-function labelStyles(props?: { textAnchor?: 'start' | 'middle' | 'end' }) {
+function labelStyles(props?: { textAnchor?: 'start' | 'middle' | 'end'; fontWeight?: number }) {
   return {
     fontFamily: fontFamily.value,
     fontSize: `${mapConfig.label.fontSize}px`,
-    fontWeight: mapConfig.label.fontWeight,
+    fontWeight: props?.fontWeight ?? mapConfig.label.fontWeight,
     textAnchor: props?.textAnchor ?? 'middle',
     dominantBaseline: 'middle',
   } as const;
@@ -51,7 +51,7 @@ function labelStyles(props?: { textAnchor?: 'start' | 'middle' | 'end' }) {
 function bboxText(
   svg: SVGSVGElement,
   text: string,
-  props?: { textAnchor?: 'start' | 'middle' | 'end' },
+  props?: { textAnchor?: 'start' | 'middle' | 'end'; fontWeight?: number },
 ) {
   const svgns = 'http://www.w3.org/2000/svg';
   const data = document.createTextNode(text);
@@ -74,14 +74,17 @@ const svgProps = computed(() => {
   if (!svg.value || !fontsLoaded.value) {
     return { positions: [] };
   }
+  const svgElement = svg.value;
 
   let positions: StationPosition[] = [];
 
   for (const station of line.stations) {
-    const svgElement = svg.value;
     positions.push(
       layoutStrategy.nextPosition(positions.at(-1), station, mapConfig, (props) =>
-        bboxText(svgElement, station.name, { textAnchor: props?.textAnchor }),
+        bboxText(svgElement, station.name, {
+          textAnchor: props?.textAnchor,
+          fontWeight: station.terminus ? 700 : undefined,
+        }),
       ),
     );
   }
@@ -142,7 +145,7 @@ const polylinePoints = computed(() =>
         :x="pos.label.x"
         :y="pos.label.y"
         :name="pos.station.name"
-        :style="labelStyles({ textAnchor: pos.textAnchor })"
+        :style="labelStyles({ textAnchor: pos.textAnchor, fontWeight: pos.station.terminus ? 700 : undefined })"
       >
         {{ pos.station.name }}
       </text>
