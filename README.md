@@ -1,6 +1,18 @@
 # subway-mapper
 
-This template should help get you started developing with Vue 3 in Vite.
+A project for creating subway maps in SVG, implemented in Vue 3.
+
+## Networks
+
+The following subway networks are currently supported:
+
+### München Verkehrs- und Tarifverbund (MVV)
+
+#### Fonts used
+
+- General font: [Asap](https://fonts.google.com/specimen/Asap) (also for regional train numbers)
+- S-Bahn numbers: [Helvetica](https://www.fonts.com/font/linotype/helvetica). Free alternative: [Inter](https://fonts.google.com/specimen/Inter)
+- U-Bahn numbers: [Frutiger](https://www.fonts.com/font/linotype/frutiger). Free alternative: [Hind](https://fonts.google.com/specimen/Hind)
 
 ## Recommended IDE Setup
 
