@@ -22,7 +22,7 @@ export const FontReference = z.object({
 export type FontReference = z.infer<typeof FontReference>;
 
 export const Line = z.object({
-  system: z.string().optional(),
+  system: z.string().optional().describe('The name of the transit system'),
   font: z
     .union([
       z

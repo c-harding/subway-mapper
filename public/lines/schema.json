@@ -1,40 +1,72 @@
 {
-    "$schema": "http://json-schema.org/draft-04/schema#",
-    "type": "object",
-    "properties": {
-        "system": {
-            "description": "The name of the transit system",
-            "type": "string"
-        },
-        "name": {
-            "description": "The name of the line",
-            "type": "string"
-        },
-        "color": {
-            "description": "The color of the line in hex format",
-            "type": "string"
-        },
-        "stations": {
-            "type": "array",
-            "items": {
-                "type": [
-                    "object",
-                    "string"
-                ],
-                "properties": {
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name"
-                ]
-            }
-        }
+  "type": "object",
+  "properties": {
+    "system": {
+      "description": "The name of the transit system",
+      "type": "string"
     },
-    "required": [
-        "system",
-        "name",
-        "stations"
-    ]
+    "font": {
+      "anyOf": [
+        {
+          "description": "Google Fonts reference, starting with \"google-fonts:\"",
+          "type": "string",
+          "pattern": "^google-fonts:.*"
+        },
+        {
+          "description": "Browser font reference, starting with \"browser:\"",
+          "type": "string",
+          "pattern": "^browser:.*"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "family": {
+              "description": "Font family name",
+              "type": "string"
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^\\.\\/.*",
+              "description": "Relative URL to font file"
+            }
+          },
+          "required": [
+            "url"
+          ]
+        }
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "stations": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "type": "string"
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "name",
+    "color",
+    "stations"
+  ]
 }

@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
+    "generate-json-schema": "node src/generate-json-schema.ts > public/lines/schema.json",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/"
   },
