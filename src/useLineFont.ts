@@ -1,28 +1,23 @@
+import { type OnCleanup, type WatchCallback } from '@vue/reactivity';
 import * as uuid from 'uuid';
-import { Line } from './model';
 import {
   isReactive,
   isRef,
   onUnmounted,
-  readonly,
-  ref,
   watch,
   type MaybeRefOrGetter,
-  type Ref,
   type WatchOptions,
 } from 'vue';
-import { type OnCleanup, type WatchCallback } from '@vue/reactivity';
+import { FontReference, Line } from './model';
 
-export function useLineFont(line: MaybeRefOrGetter<Line>): Ref<string | undefined> {
-  const result = ref<string | undefined>(undefined);
+export function useLineFont(line: MaybeRefOrGetter<Line | undefined>) {
   watchMaybeRefOrGetter(
     line,
     (newLine, _, onCleanup) => {
-      result.value = getLineFont(newLine, onCleanup);
+      if (newLine?.font) getFont(newLine.font, onCleanup);
     },
     { immediate: true },
   );
-  return readonly(result);
 }
 
 function watchMaybeRefOrGetter<T, Immediate extends Readonly<boolean> = false>(
@@ -41,21 +36,21 @@ function watchMaybeRefOrGetter<T, Immediate extends Readonly<boolean> = false>(
   }
 }
 
-function getLineFont(line: Line, onCleanup: OnCleanup): string | undefined {
-  if (!line.font) {
-    return;
-  } else if (line.font?.url.startsWith('google-fonts:')) {
-    const fontSpec = line.font.url.replace('google-fonts:', '');
+function getFont(font: FontReference, onCleanup: OnCleanup) {
+  if (font.url.startsWith('google-fonts:')) {
+    const fontSpec = font.url.replace('google-fonts:', '');
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?display=swap&family=${encodeURIComponent(fontSpec.replaceAll(' ', '+'))}`;
+    link.href = `https://fonts.googleapis.com/css2?display=swap&family=${encodeURIComponent(
+      fontSpec.replaceAll(' ', '+'),
+    )}`;
     document.head.appendChild(link);
     onCleanup(() => document.head.removeChild(link));
-    return fontSpec.split(':', 1)[0]?.replaceAll('+', ' ');
-  } else if (line.font?.url.startsWith('browser:')) {
-    return line.font.url.replace('browser:', '');
-  } else if (line.font?.url.startsWith('./')) {
-    const fontFamily = CSS.escape(line.font?.family ?? uuid.v4());
+    return fontSpec.split(':', 1)[0]!.replaceAll('+', ' ');
+  } else if (font.url.startsWith('browser:')) {
+    // Nothing to load
+  } else if (font.url.startsWith('./')) {
+    const fontFamily = CSS.escape(font.family ?? uuid.v4());
 
     const stylesheetEl = document.head.appendChild(document.createElement('style'));
     const stylesheet = stylesheetEl.sheet!;
@@ -63,11 +58,24 @@ function getLineFont(line: Line, onCleanup: OnCleanup): string | undefined {
     stylesheet.insertRule(`
       @font-face {
         font-family: '${fontFamily}';
-        src: url(${CSS.escape(line.font.url)});
+        src: url(${CSS.escape(font.url)});
       }
     `);
     onCleanup(() => document.head.removeChild(stylesheetEl));
     return fontFamily;
+  } else {
+    throw new Error('Invalid font URL');
+  }
+}
+
+export function getFontName(font: FontReference) {
+  if (font.url.startsWith('google-fonts:')) {
+    const fontSpec = font.url.replace('google-fonts:', '');
+    return fontSpec.split(':', 1)[0]!.replaceAll('+', ' ');
+  } else if (font.url.startsWith('browser:')) {
+    return font.url.replace('browser:', '');
+  } else if (font.url.startsWith('./')) {
+    return CSS.escape(font.family ?? uuid.v4());
   } else {
     throw new Error('Invalid font URL');
   }

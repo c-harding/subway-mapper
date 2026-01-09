@@ -21,31 +21,32 @@ export const FontReference = z.object({
 });
 export type FontReference = z.infer<typeof FontReference>;
 
+export const FontNameOrReference = z.union([
+  z
+    .string()
+    .startsWith('google-fonts:', `Font references must start with 'google-fonts: or browser:'`)
+    .transform((str) => {
+      return {
+        url: str,
+      } as FontReference;
+    })
+    .describe('Google Fonts reference, starting with "google-fonts:"'),
+  z
+    .string()
+    .startsWith('browser:', `Font references must start with 'google-fonts: or browser:'`)
+    .transform((str) => {
+      return {
+        url: str,
+      } as FontReference;
+    })
+    .describe('Browser font reference, starting with "browser:"'),
+  FontReference,
+]);
+export type FontNameOrReference = z.infer<typeof FontNameOrReference>;
+
 export const Line = z.object({
   system: z.string().optional().describe('The name of the transit system'),
-  font: z
-    .union([
-      z
-        .string()
-        .startsWith('google-fonts:', `Font references must start with 'google-fonts: or browser:'`)
-        .transform((str) => {
-          return {
-            url: str,
-          } as FontReference;
-        })
-        .describe('Google Fonts reference, starting with "google-fonts:"'),
-      z
-        .string()
-        .startsWith('browser:', `Font references must start with 'google-fonts: or browser:'`)
-        .transform((str) => {
-          return {
-            url: str,
-          } as FontReference;
-        })
-        .describe('Browser font reference, starting with "browser:"'),
-      FontReference,
-    ])
-    .optional(),
+  font: FontNameOrReference.optional(),
   name: z.string(),
   color: z.string(),
   stations: z.array(RawStation).transform((stations) =>

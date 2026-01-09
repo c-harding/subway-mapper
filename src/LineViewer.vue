@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { useLineFont } from './useLineFont';
+import { computed } from 'vue';
 import type { Line } from './model';
+import { getFontName } from './useLineFont';
 
 const { line } = defineProps<{
   line: Line;
 }>();
 
-const fontFamily = useLineFont(line);
+const fontFamily = computed(() => line.font && getFontName(line.font));
 </script>
 <template>
   <div :style="{ fontFamily }" :class="$style.lineViewer">

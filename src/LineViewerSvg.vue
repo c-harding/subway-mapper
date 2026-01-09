@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useLineFont } from './useLineFont';
-import type { Line } from './model';
-import { computed, useTemplateRef } from 'vue';
 import { computedAsync } from '@vueuse/core';
+import { computed, useTemplateRef } from 'vue';
 import { Box } from './Point';
 import type { MapConfig } from './config';
 import { type LayoutStrategy, type StationPosition } from './layout-strategy';
+import type { Line } from './model';
+import { getFontName } from './useLineFont';
 
 const { line, layoutStrategy } = defineProps<{
   line: Line;
@@ -32,7 +32,7 @@ const mapConfig: MapConfig = {
   },
 };
 
-const fontFamily = useLineFont(line);
+const fontFamily = computed(() => line.font && getFontName(line.font));
 
 const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), false);
 
@@ -76,7 +76,7 @@ const svgProps = computed(() => {
   }
   const svgElement = svg.value;
 
-  let positions: StationPosition[] = [];
+  const positions: StationPosition[] = [];
 
   for (const station of line.stations) {
     positions.push(
