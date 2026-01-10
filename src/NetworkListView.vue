@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Network } from './model';
-import { getFontName } from './useLineFont';
+import { getFontName } from './util/font';
 
 const { network } = defineProps<{
   network: Network;

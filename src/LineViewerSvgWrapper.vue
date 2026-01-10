@@ -3,7 +3,7 @@ import { computed, ref, shallowRef, watch } from 'vue';
 import { layoutStrategies } from './layout-strategy';
 import LineViewerSvg from './LineViewerSvg.vue';
 import type { Network } from './model';
-import { getFontName } from './useLineFont';
+import { getFontName } from './util/font';
 
 const { network } = defineProps<{
   network: Network;

@@ -8,7 +8,7 @@ import {
   type MaybeRefOrGetter,
   type WatchOptions,
 } from 'vue';
-import { FontReference, Network } from './model';
+import { FontReference, Network } from '../model';
 
 export function useNetworkFonts(network: MaybeRefOrGetter<Network | undefined>) {
   watchMaybeRefOrGetter(

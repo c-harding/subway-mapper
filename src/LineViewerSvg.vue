@@ -5,7 +5,7 @@ import { Box } from './Point';
 import type { MapConfig } from './config';
 import { type LayoutStrategy, type StationPosition } from './layout-strategy';
 import type { Line, Network } from './model';
-import { getFontName } from './useLineFont';
+import { getFontName } from './util/font';
 
 const { network, line, layoutStrategy } = defineProps<{
   network: Network;

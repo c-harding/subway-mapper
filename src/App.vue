@@ -3,7 +3,7 @@ import { computedAsync } from '@vueuse/core';
 import LineViewerSvgWrapper from './LineViewerSvgWrapper.vue';
 import { loadNetwork } from './loadNetwork';
 import LineViewer from './NetworkListView.vue';
-import { useNetworkFonts } from './useLineFont';
+import { useNetworkFonts } from './util/font';
 
 const networkUrl = '/networks/mvg.json';
 const network = computedAsync(() => loadNetwork(networkUrl));
