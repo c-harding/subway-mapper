@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computedAsync } from '@vueuse/core';
-import LineViewer from './LineViewer.vue';
 import LineViewerSvgWrapper from './LineViewerSvgWrapper.vue';
-import { loadLine } from './loadLine';
-import { useLineFont } from './useLineFont';
+import { loadNetwork } from './loadNetwork';
+import LineViewer from './NetworkListView.vue';
+import { useNetworkFonts } from './useLineFont';
 
-const lineUrl = '/lines/line.json';
-const line = computedAsync(() => loadLine(lineUrl));
+const networkUrl = '/networks/mvg.json';
+const network = computedAsync(() => loadNetwork(networkUrl));
 
-useLineFont(line);
+useNetworkFonts(network);
 </script>
 
 <template>
-  <LineViewerSvgWrapper v-if="line" :line :key="line.name" />
-  <LineViewer v-if="line" :line />
+  <LineViewerSvgWrapper v-if="network" :network :key="network.name" />
+  <LineViewer v-if="network" :network />
 </template>
 
 <style module></style>

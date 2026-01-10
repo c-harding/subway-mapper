@@ -4,10 +4,11 @@ import { computed, useTemplateRef } from 'vue';
 import { Box } from './Point';
 import type { MapConfig } from './config';
 import { type LayoutStrategy, type StationPosition } from './layout-strategy';
-import type { Line } from './model';
+import type { Line, Network } from './model';
 import { getFontName } from './useLineFont';
 
-const { line, layoutStrategy } = defineProps<{
+const { network, line, layoutStrategy } = defineProps<{
+  network: Network;
   line: Line;
   layoutStrategy: LayoutStrategy;
 }>();
@@ -32,7 +33,7 @@ const mapConfig: MapConfig = {
   },
 };
 
-const fontFamily = computed(() => line.font && getFontName(line.font));
+const fontFamily = computed(() => network.font && getFontName(network.font));
 
 const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), false);
 

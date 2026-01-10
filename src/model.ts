@@ -45,8 +45,6 @@ export const FontNameOrReference = z.union([
 export type FontNameOrReference = z.infer<typeof FontNameOrReference>;
 
 export const Line = z.object({
-  system: z.string().optional().describe('The name of the transit system'),
-  font: FontNameOrReference.optional(),
   name: z.string(),
   color: z.string(),
   stations: z.array(RawStation).transform((stations) =>
@@ -57,3 +55,10 @@ export const Line = z.object({
   ),
 });
 export type Line = z.infer<typeof Line>;
+
+export const Network = z.object({
+  name: z.string().optional(),
+  font: FontNameOrReference.optional(),
+  lines: z.array(Line),
+});
+export type Network = z.infer<typeof Network>;

@@ -1,8 +1,7 @@
 {
   "type": "object",
   "properties": {
-    "system": {
-      "description": "The name of the transit system",
+    "name": {
       "type": "string"
     },
     "font": {
@@ -36,37 +35,48 @@
         }
       ]
     },
-    "name": {
-      "type": "string"
-    },
-    "color": {
-      "type": "string"
-    },
-    "stations": {
+    "lines": {
       "type": "array",
       "items": {
-        "anyOf": [
-          {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "name"
-            ]
-          },
-          {
+        "type": "object",
+        "properties": {
+          "name": {
             "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "stations": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ]
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
           }
+        },
+        "required": [
+          "name",
+          "color",
+          "stations"
         ]
       }
     }
   },
   "required": [
-    "name",
-    "color",
-    "stations"
+    "lines"
   ]
 }

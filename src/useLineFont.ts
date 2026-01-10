@@ -8,13 +8,13 @@ import {
   type MaybeRefOrGetter,
   type WatchOptions,
 } from 'vue';
-import { FontReference, Line } from './model';
+import { FontReference, Network } from './model';
 
-export function useLineFont(line: MaybeRefOrGetter<Line | undefined>) {
+export function useNetworkFonts(network: MaybeRefOrGetter<Network | undefined>) {
   watchMaybeRefOrGetter(
-    line,
-    (newLine, _, onCleanup) => {
-      if (newLine?.font) getFont(newLine.font, onCleanup);
+    network,
+    (newNetwork, _, onCleanup) => {
+      if (newNetwork) getNetworkFonts(newNetwork, onCleanup);
     },
     { immediate: true },
   );
@@ -78,5 +78,11 @@ export function getFontName(font: FontReference) {
     return CSS.escape(font.family ?? uuid.v4());
   } else {
     throw new Error('Invalid font URL');
+  }
+}
+
+function getNetworkFonts(network: Network, onCleanup: OnCleanup) {
+  if (network.font) {
+    getFont(network.font, onCleanup);
   }
 }

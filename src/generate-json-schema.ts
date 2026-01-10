@@ -1,4 +1,6 @@
 import * as z from 'zod';
-import { Line } from './model.ts';
+import { Network } from './model.ts';
 
-console.log(JSON.stringify(z.toJSONSchema(Line, { io: 'input', target: 'openapi-3.0' }), null, 2));
+console.log(
+  JSON.stringify(z.toJSONSchema(Network, { io: 'input', target: 'openapi-3.0' }), null, 2),
+);

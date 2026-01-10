@@ -1,0 +1,39 @@
+{
+    "$schema": "./schema.json",
+    "name": "Munich U-Bahn",
+    "font": "google-fonts:Asap:ital,wdth,wght@0,98,100..900",
+    "lines": [
+        {
+            "name": "U6",
+            "color": "#0065ae",
+            "stations": [
+                "Garching-Forschungszentrum",
+                "Garching",
+                "Garching-Hochbrück",
+                "Fröttmaning",
+                "Kieferngarten",
+                "Freimann",
+                "Studentenstadt",
+                "Alte Heide",
+                "Nordfriedhof",
+                "Dietlindenstraße",
+                "Münchner Freiheit",
+                "Giselastraße",
+                "Universität",
+                "Odeonsplatz",
+                "Marienplatz",
+                "Sendlinger Tor",
+                "Goetheplatz",
+                "Poccistraße",
+                "Implerstraße",
+                "Harras",
+                "Partnachplatz",
+                "Westpark",
+                "Holzapfelkreuth",
+                "Haderner Stern",
+                "Großhadern",
+                "Klinikum Großhadern"
+            ]
+        }
+    ]
+}
