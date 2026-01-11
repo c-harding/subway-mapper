@@ -153,6 +153,49 @@ export class Box {
     });
   }
 
+  static overlaps(boxA: Box, boxB: Box): boolean {
+    return (
+      boxA.max.x > boxB.min.x &&
+      boxA.min.x < boxB.max.x &&
+      boxA.max.y > boxB.min.y &&
+      boxA.min.y < boxB.max.y
+    );
+  }
+
+  /**
+   * Get the distance the new boxes must be moved in order to no longer overlap the old boxes.
+   *
+   * The movement is in the direction of the given offset,
+   * and the return value is a scaling factor to apply to that offset.
+   * This scaling factor is zero if the boxes do not overlap, or positive otherwise.
+   *
+   * Note that offset itself may be negative in either or both dimensions.
+   * This indicates that the boxes should be moved upwards or leftwards to separate them.
+   */
+
+  static separationFactor(oldBoxes: Box[], newBoxes: Box[], offset: PointOffsetLike): number {
+    let factor = 0;
+
+    let movedNewBoxes = newBoxes;
+
+    while (factor < Infinity) {
+      const newFactor = Math.max(
+        ...oldBoxes.flatMap((oldBox) =>
+          movedNewBoxes.map((newBox) => Box.pairSeparationFactor(oldBox, newBox, offset)),
+        ),
+      );
+      if (newFactor === 0) {
+        break;
+      }
+      factor += newFactor;
+      const offsetScaled = new PointOffset(offset).scale(newFactor);
+      movedNewBoxes = movedNewBoxes.map(
+        (box) => new Box(box.min.offset(offsetScaled), box.max.offset(offsetScaled)),
+      );
+    }
+    return factor;
+  }
+
   /**
    * Get the distance Box B must be moved in order to no longer overlap Box A.
    *
@@ -162,44 +205,23 @@ export class Box {
    *
    * Note that offset itself may be negative in either or both dimensions.
    * This indicates that the boxes should be moved upwards or leftwards to separate them.
-   *
-   * If padding is provided, the boxes are considered to be larger by that amount in each dimension.
    */
-  static separationFactor(
-    oldBox: Box,
-    newBox: Box,
-    offset: PointOffsetLike,
-    padding?: number | { x?: number; y?: number },
-  ): number {
-    let paddedOldBox: Box;
-    if (typeof padding === 'number') {
-      paddedOldBox = oldBox.withPadding(padding);
-    } else if (padding) {
-      paddedOldBox = oldBox.withPadding(padding.x ?? 0, padding.y ?? 0);
-    } else {
-      paddedOldBox = oldBox;
-    }
-
-    if (
-      paddedOldBox.max.x <= newBox.min.x ||
-      newBox.max.x <= paddedOldBox.min.x ||
-      paddedOldBox.max.y <= newBox.min.y ||
-      newBox.max.y <= paddedOldBox.min.y
-    ) {
+  private static pairSeparationFactor(oldBox: Box, newBox: Box, offset: PointOffsetLike): number {
+    if (!Box.overlaps(oldBox, newBox)) {
       return 0;
     }
 
     const factorX = !offset.dx
       ? Infinity
       : Math.max(
-          (paddedOldBox.max.x - newBox.min.x) / offset.dx,
-          (newBox.max.x - paddedOldBox.min.x) / -offset.dx,
+          (oldBox.max.x - newBox.min.x) / offset.dx,
+          (newBox.max.x - oldBox.min.x) / -offset.dx,
         );
     const factorY = !offset.dy
       ? Infinity
       : Math.max(
-          (paddedOldBox.max.y - newBox.min.y) / offset.dy,
-          (newBox.max.y - paddedOldBox.min.y) / -offset.dy,
+          (oldBox.max.y - newBox.min.y) / offset.dy,
+          (newBox.max.y - oldBox.min.y) / -offset.dy,
         );
     return Math.min(factorX, factorY);
   }

@@ -25,7 +25,7 @@ export interface LayoutStrategy {
 }
 
 const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => ({
-  nextPosition(previous, station, mapConfig, getLabelBox) {
+  nextPosition(previous, station, mapConfig, getLabelBox): StationPosition {
     const textAnchor = side === 'left' ? 'end' : 'start';
     const labelBox = getLabelBox({ textAnchor });
 
@@ -48,25 +48,13 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
     if (previous) {
       const offsetDirection = new PointOffset({ dy: 1 });
       const offset = offsetDirection.scale(
-        Math.max(
-          Box.separationFactor(previous.marker, marker, offsetDirection, {
-            x: 0,
-            y: mapConfig.spacing.marker,
-          }),
-          Box.separationFactor(previous.label, label, offsetDirection, {
-            x: 0,
-            y: mapConfig.spacing.label,
-          }),
-          // prevent overlaps between marker and previous label
-          Box.separationFactor(previous.label, marker, offsetDirection, {
-            x: Infinity,
-            y: mapConfig.spacing.label,
-          }),
-          // prevent overlaps between label and previous marker
-          Box.separationFactor(previous.marker, label, offsetDirection, {
-            x: Infinity,
-            y: mapConfig.spacing.label,
-          }),
+        Box.separationFactor(
+          [
+            previous.marker.withPadding(mapConfig.spacing.marker, mapConfig.gap.markerLabel * 2),
+            previous.label.withPadding(mapConfig.spacing.label, mapConfig.gap.markerLabel * 2),
+          ],
+          [marker, label],
+          offsetDirection,
         ),
       );
 
@@ -110,25 +98,13 @@ const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy =>
     if (previous) {
       const offsetDirection = new PointOffset({ dx: 1 });
       const offset = offsetDirection.scale(
-        Math.max(
-          Box.separationFactor(previous.marker, marker, offsetDirection, {
-            x: mapConfig.spacing.marker,
-            y: 0,
-          }),
-          Box.separationFactor(previous.label, label, offsetDirection, {
-            x: mapConfig.spacing.label,
-            y: 0,
-          }),
-          // prevent overlaps between marker and previous label
-          Box.separationFactor(previous.label, marker, offsetDirection, {
-            x: mapConfig.spacing.label,
-            y: Infinity,
-          }),
-          // prevent overlaps between label and previous marker
-          Box.separationFactor(previous.marker, label, offsetDirection, {
-            x: mapConfig.spacing.label,
-            y: Infinity,
-          }),
+        Box.separationFactor(
+          [
+            previous.marker.withPadding(mapConfig.spacing.marker, mapConfig.gap.markerLabel * 2),
+            previous.label.withPadding(mapConfig.spacing.label, mapConfig.gap.markerLabel * 2),
+          ],
+          [marker, label],
+          offsetDirection,
         ),
       );
 
@@ -146,7 +122,7 @@ const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy =>
 });
 
 const denseHorizontalLayoutStrategy: LayoutStrategy = {
-  nextPosition(previous, station, mapConfig, getLabelBox) {
+  nextPosition(previous, station, mapConfig, getLabelBox): StationPosition {
     const positions = [
       layoutStrategies.horizontal.nextPosition(previous, station, mapConfig, getLabelBox),
       layoutStrategies.topHorizontal.nextPosition(previous, station, mapConfig, getLabelBox),
