@@ -70,6 +70,53 @@ export class Point {
   }
 }
 
+type PaddingX =
+  | { left?: number; right?: number; x?: undefined }
+  | { x?: number; left?: undefined; right?: undefined };
+type PaddingY =
+  | { top?: number; bottom?: number; y?: undefined }
+  | { y?: number; top?: undefined; bottom?: undefined };
+
+type PaddingLike = (PaddingX & PaddingY) | number;
+
+export class Padding {
+  readonly top: number;
+  readonly bottom: number;
+  readonly left: number;
+  readonly right: number;
+
+  constructor(padding: PaddingLike) {
+    if (typeof padding === 'number') {
+      this.top = padding;
+      this.bottom = padding;
+      this.left = padding;
+      this.right = padding;
+    } else {
+      this.top = padding.top ?? padding.y ?? 0;
+      this.bottom = padding.bottom ?? padding.y ?? 0;
+      this.left = padding.left ?? padding.x ?? 0;
+      this.right = padding.right ?? padding.x ?? 0;
+    }
+  }
+}
+
+type SpacingLike = { x?: number; y?: number } | number;
+
+export class Spacing {
+  readonly x: number;
+  readonly y: number;
+
+  constructor(spacing: SpacingLike) {
+    if (typeof spacing === 'number') {
+      this.x = spacing;
+      this.y = spacing;
+    } else {
+      this.x = spacing.x ?? 0;
+      this.y = spacing.y ?? 0;
+    }
+  }
+}
+
 export interface PointOffsetLike {
   dx?: number;
   dy?: number;
@@ -142,14 +189,13 @@ export class Box {
     return new Box({ minX, minY, maxX, maxY });
   }
 
-  withPadding(padding: number): Box;
-  withPadding(paddingX: number, paddingY: number): Box;
-  withPadding(paddingX: number, paddingY = paddingX): Box {
+  withPadding(paddingLike: PaddingLike): Box {
+    const padding = new Padding(paddingLike);
     return new Box({
-      minX: this.min.x - paddingX,
-      minY: this.min.y - paddingY,
-      maxX: this.max.x + paddingX,
-      maxY: this.max.y + paddingY,
+      minX: this.min.x - padding.left,
+      minY: this.min.y - padding.top,
+      maxX: this.max.x + padding.right,
+      maxY: this.max.y + padding.bottom,
     });
   }
 
@@ -173,7 +219,11 @@ export class Box {
    * This indicates that the boxes should be moved upwards or leftwards to separate them.
    */
 
-  static separationFactor(oldBoxes: Box[], newBoxes: Box[], offset: PointOffsetLike): number {
+  static separationFactor(
+    oldBoxes: readonly Box[],
+    newBoxes: readonly Box[],
+    offset: PointOffsetLike,
+  ): number {
     let factor = 0;
 
     let movedNewBoxes = newBoxes;
@@ -265,10 +315,8 @@ class RangedPoint extends Point implements Box {
     return this.box;
   }
 
-  withPadding(padding: number): Box;
-  withPadding(paddingX: number, paddingY: number): Box;
-  withPadding(paddingX: number, paddingY = paddingX): Box {
-    return this.withBox(this.box.withPadding(paddingX, paddingY));
+  withPadding(paddingLike: PaddingLike): RangedPoint {
+    return this.withBox(this.box.withPadding(paddingLike));
   }
 
   override offset(dx: number, dy: number): RangedPoint;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computedAsync } from '@vueuse/core';
 import { computed, useTemplateRef } from 'vue';
-import { Box } from './Point';
+import { Box, Padding, Spacing } from './Point';
 import type { MapConfig } from './config';
 import { type LayoutStrategy, type StationPosition } from './layout-strategy';
 import type { Line, Network } from './model';
@@ -13,16 +13,17 @@ const { network, line, layoutStrategy } = defineProps<{
   network: Network;
   line: Line;
   layoutStrategy: LayoutStrategy;
+  showSafeAreas?: boolean;
 }>();
 
 const mapConfig: MapConfig = {
-  padding: 10,
+  padding: new Padding(10),
   spacing: {
-    marker: 32,
-    label: 15,
+    marker: new Spacing(32),
+    label: new Spacing(15),
   },
   gap: {
-    markerLabel: 2,
+    markerLabel: new Spacing(2),
   },
   lineWidth: 10,
   marker: {
@@ -97,6 +98,20 @@ const polylinePoints = computed(() =>
 </script>
 <template>
   <svg ref="svg" :viewBox>
+    <g id="safeAreas" v-if="showSafeAreas">
+      <template v-for="pos in svgProps.positions" :key="pos.station.name">
+        <rect
+          v-for="(safeArea, i) in pos.safeAreas"
+          :key="i"
+          :x="safeArea.min.x"
+          :y="safeArea.min.y"
+          :width="safeArea.width"
+          :height="safeArea.height"
+          fill="red"
+          fill-opacity="0.2"
+        />
+      </template>
+    </g>
     <g id="lines-background">
       <polyline
         :points="polylinePoints"

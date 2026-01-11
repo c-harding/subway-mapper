@@ -1,11 +1,13 @@
+import type { Padding, Spacing } from './Point';
+
 export interface MapConfig {
-  padding: number;
+  padding: Padding;
   spacing: {
-    marker: number;
-    label: number;
+    marker: Spacing;
+    label: Spacing;
   };
   gap: {
-    markerLabel: number;
+    markerLabel: Spacing;
   };
   lineWidth: number;
   marker: {

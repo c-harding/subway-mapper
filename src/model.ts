@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { Padding } from './Point';
 
 export const StationObject = z.object({
   name: z.string(),
@@ -63,25 +64,27 @@ export const Line = z
   .meta({ id: 'Line' });
 export type Line = z.infer<typeof Line>;
 
-export const Padding = z
+export const RawPadding = z
   .union([
-    z.number().transform((p) => ({ top: p, bottom: p, left: p, right: p })),
-    z.record(z.enum(['x', 'y', 'top', 'bottom', 'left', 'right']), z.number()).transform((obj) => ({
-      top: obj.top ?? obj.y ?? 0,
-      bottom: obj.bottom ?? obj.y ?? 0,
-      left: obj.left ?? obj.x ?? 0,
-      right: obj.right ?? obj.x ?? 0,
-    })),
+    z.number().transform((p) => new Padding(p)),
+    z.record(z.enum(['x', 'y', 'top', 'bottom', 'left', 'right']), z.number()).transform(
+      (obj) =>
+        new Padding({
+          top: obj.top ?? obj.y ?? 0,
+          bottom: obj.bottom ?? obj.y ?? 0,
+          left: obj.left ?? obj.x ?? 0,
+          right: obj.right ?? obj.x ?? 0,
+        }),
+    ),
   ])
   .meta({ id: 'Padding' });
-export type Padding = z.infer<typeof Padding>;
 
 export const LineType = z
   .object({
     shape: z.enum(['oval', 'rectangle', 'pill']).optional(),
     width: z.number().optional(),
     height: z.number().optional(),
-    padding: Padding.optional(),
+    padding: RawPadding.optional(),
     font: FontNameOrReference.optional(),
     fontWeight: z.number().optional(),
     fontSize: z.number().optional(),

@@ -15,6 +15,7 @@ export interface StationPosition {
   labelLines: string[];
   variant: string;
   textAnchor?: 'start' | 'middle' | 'end';
+  safeAreas: readonly RangedPoint[];
 }
 
 export interface LayoutStrategy {
@@ -43,8 +44,8 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
     let label = new Point({
       x:
         side === 'left'
-          ? marker.min.x - mapConfig.gap.markerLabel
-          : marker.max.x + mapConfig.gap.markerLabel,
+          ? marker.min.x - mapConfig.gap.markerLabel.x
+          : marker.max.x + mapConfig.gap.markerLabel.x,
       y:
         marker.y -
         ((labelBox.lines.length - 1) / 2) *
@@ -54,14 +55,7 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
     if (previous) {
       const offsetDirection = new PointOffset({ dy: 1 });
       const offset = offsetDirection.scale(
-        Box.separationFactor(
-          [
-            previous.marker.withPadding(mapConfig.spacing.marker, mapConfig.gap.markerLabel * 2),
-            previous.label.withPadding(mapConfig.spacing.label, mapConfig.gap.markerLabel * 2),
-          ],
-          [marker, label],
-          offsetDirection,
-        ),
+        Box.separationFactor(previous.safeAreas, [marker, label], offsetDirection),
       );
 
       marker = marker.offset(offset);
@@ -75,6 +69,16 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
       label,
       variant: side,
       textAnchor,
+      safeAreas: [
+        marker.withPadding({
+          x: mapConfig.spacing.marker.x,
+          y: mapConfig.gap.markerLabel.y * 2,
+        }),
+        label.withPadding({
+          x: mapConfig.spacing.label.x,
+          y: mapConfig.gap.markerLabel.y * 2,
+        }),
+      ],
     };
   },
 });
@@ -97,8 +101,8 @@ const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy =>
       x: marker.x,
       y:
         side === 'top'
-          ? marker.min.y - mapConfig.gap.markerLabel
-          : marker.max.y + mapConfig.gap.markerLabel,
+          ? marker.min.y - mapConfig.gap.markerLabel.y
+          : marker.max.y + mapConfig.gap.markerLabel.y,
     })
       .withSizeFromBox(labelBox)
       .offset({ dy: side === 'top' ? -labelBox.height - labelBox.y : -labelBox.y });
@@ -106,14 +110,7 @@ const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy =>
     if (previous) {
       const offsetDirection = new PointOffset({ dx: 1 });
       const offset = offsetDirection.scale(
-        Box.separationFactor(
-          [
-            previous.marker.withPadding(mapConfig.spacing.marker, mapConfig.gap.markerLabel * 2),
-            previous.label.withPadding(mapConfig.spacing.label, mapConfig.gap.markerLabel * 2),
-          ],
-          [marker, label],
-          offsetDirection,
-        ),
+        Box.separationFactor(previous.safeAreas, [marker, label], offsetDirection),
       );
 
       marker = marker.offset(offset);
@@ -126,6 +123,16 @@ const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy =>
       marker,
       label,
       variant: side,
+      safeAreas: [
+        marker.withPadding({
+          x: mapConfig.spacing.marker.x,
+          y: mapConfig.gap.markerLabel.y * 2,
+        }),
+        label.withPadding({
+          x: mapConfig.spacing.label.x,
+          y: mapConfig.gap.markerLabel.y * 2,
+        }),
+      ],
     };
   },
 });

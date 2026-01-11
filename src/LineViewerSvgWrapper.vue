@@ -19,12 +19,20 @@ watch([() => network], ([newNetwork]) => {
 const layoutStrategyKeys = Object.keys(layoutStrategies) as (keyof typeof layoutStrategies)[];
 const layoutStrategyKey = ref<keyof typeof layoutStrategies>('vertical');
 const layoutStrategy = computed(() => layoutStrategies[layoutStrategyKey.value]);
+
+const showSafeAreas = ref(false);
 </script>
 <template>
   <p>
-    <button v-for="key of layoutStrategyKeys" :key @click="layoutStrategyKey = key">
-      Set layout to {{ key }}
-    </button>
+    <label v-for="(key, i) of layoutStrategyKeys" :key>
+      <input
+        name="layout-strategy"
+        type="radio"
+        :checked="i == 0"
+        @click="layoutStrategyKey = key"
+      />
+      {{ key }}
+    </label>
   </p>
 
   <p :class="$style.lineSelection">
@@ -33,16 +41,23 @@ const layoutStrategy = computed(() => layoutStrategies[layoutStrategyKey.value])
         name="chosen-line"
         type="radio"
         :checked="chosenLine === line"
-        @change="
-          chosenLine = line;
-          console.log('Line selected:', line.name);
-        "
+        @change="chosenLine = line"
       />
       <LineNumberSvg style="height: 1em" :network :line />
     </label>
   </p>
 
-  <LineViewerSvg :network :line="chosenLine" :layoutStrategy :key="layoutStrategyKey" />
+  <p>
+    <label><input type="checkbox" v-model="showSafeAreas" /> Show safe areas</label>
+  </p>
+
+  <LineViewerSvg
+    :network
+    :line="chosenLine"
+    :layoutStrategy
+    :key="layoutStrategyKey"
+    :showSafeAreas
+  />
 </template>
 
 <style module>
