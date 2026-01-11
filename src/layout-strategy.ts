@@ -1,6 +1,7 @@
 import type { MapConfig } from './config';
 import type { Station } from './model';
 import { Box, Point, PointOffset, type RangedPoint } from './Point';
+import type { TextBox } from './util/svg';
 
 const totalStationWidth = (mapConfig: MapConfig) =>
   Math.max(mapConfig.lineWidth, mapConfig.marker.radius * 2 + mapConfig.marker.strokeWidth * 2);
@@ -11,6 +12,7 @@ export interface StationPosition {
   station: Station;
   marker: RangedPoint;
   label: RangedPoint;
+  labelLines: string[];
   variant: string;
   textAnchor?: 'start' | 'middle' | 'end';
 }
@@ -20,14 +22,15 @@ export interface LayoutStrategy {
     previous: StationPosition | undefined,
     station: Station,
     mapConfig: MapConfig,
-    getLabelBox: (props?: { textAnchor?: 'start' | 'middle' | 'end' }) => SVGRect,
+    getLabelBoxes: (props?: { textAnchor?: 'start' | 'middle' | 'end' }) => TextBox[],
   ): StationPosition;
 }
 
 const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => ({
-  nextPosition(previous, station, mapConfig, getLabelBox): StationPosition {
+  nextPosition(previous, station, mapConfig, getLabelBoxes): StationPosition {
     const textAnchor = side === 'left' ? 'end' : 'start';
-    const labelBox = getLabelBox({ textAnchor });
+    const labelBoxes = getLabelBoxes({ textAnchor });
+    const labelBox = labelBoxes.at(0)!; // Use the box with the fewest lines
 
     let marker = new Point({
       x: previous?.marker.x ?? 0,
@@ -42,7 +45,10 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
         side === 'left'
           ? marker.min.x - mapConfig.gap.markerLabel
           : marker.max.x + mapConfig.gap.markerLabel,
-      y: marker.y,
+      y:
+        marker.y -
+        ((labelBox.lines.length - 1) / 2) *
+          (mapConfig.label.lineHeight ?? mapConfig.label.fontSize),
     }).withSizeFromBox(labelBox);
 
     if (previous) {
@@ -64,6 +70,7 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
 
     return {
       station,
+      labelLines: labelBox.lines,
       marker,
       label,
       variant: side,
@@ -73,8 +80,9 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
 });
 
 const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy => ({
-  nextPosition(previous, station, mapConfig, getLabelBox) {
-    const labelBox = getLabelBox();
+  nextPosition(previous, station, mapConfig, getLabelBoxes): StationPosition {
+    const labelBoxes = getLabelBoxes();
+    const labelBox = labelBoxes.at(-1)!; // Use the box with the most lines
 
     // Initial position: place at the same location as previous, or origin if first.
     // Then offset to the right as needed to avoid overlaps.
@@ -114,6 +122,7 @@ const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy =>
 
     return {
       station,
+      labelLines: labelBox.lines,
       marker,
       label,
       variant: side,
@@ -122,10 +131,10 @@ const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy =>
 });
 
 const denseHorizontalLayoutStrategy: LayoutStrategy = {
-  nextPosition(previous, station, mapConfig, getLabelBox): StationPosition {
+  nextPosition(previous, station, mapConfig, getLabelBoxes): StationPosition {
     const positions = [
-      layoutStrategies.horizontal.nextPosition(previous, station, mapConfig, getLabelBox),
-      layoutStrategies.topHorizontal.nextPosition(previous, station, mapConfig, getLabelBox),
+      layoutStrategies.horizontal.nextPosition(previous, station, mapConfig, getLabelBoxes),
+      layoutStrategies.topHorizontal.nextPosition(previous, station, mapConfig, getLabelBoxes),
     ];
 
     const { pos } = positions.reduce(

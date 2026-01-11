@@ -15,5 +15,6 @@ export interface MapConfig {
   label: {
     fontSize: number;
     fontWeight: number;
+    lineHeight?: number;
   };
 }

@@ -96,6 +96,10 @@ export const Network = z
     font: FontNameOrReference.optional(),
     lines: z.array(Line),
     lineTypes: z.record(z.string(), LineType).optional(),
+    hyphenation: z
+      .array(z.string())
+      .transform((arr) => new Map(arr.map((item) => [item.replaceAll('~', ''), item])))
+      .optional(),
   })
   .meta({ id: 'Network' });
 export type Network = z.infer<typeof Network>;

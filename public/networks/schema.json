@@ -22,6 +22,12 @@
       "additionalProperties": {
         "$ref": "#/definitions/LineType"
       }
+    },
+    "hyphenation": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [

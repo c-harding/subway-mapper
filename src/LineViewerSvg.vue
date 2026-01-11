@@ -6,7 +6,8 @@ import type { MapConfig } from './config';
 import { type LayoutStrategy, type StationPosition } from './layout-strategy';
 import type { Line, Network } from './model';
 import { getFontName } from './util/font';
-import { measureTextBBox } from './util/svg';
+import { hyphenations } from './util/hyphenation';
+import { measureTextBBoxes } from './util/svg';
 
 const { network, line, layoutStrategy } = defineProps<{
   network: Network;
@@ -61,9 +62,10 @@ const svgProps = computed(() => {
   for (const station of line.stations) {
     positions.push(
       layoutStrategy.nextPosition(positions.at(-1), station, mapConfig, (props) =>
-        measureTextBBox(
+        measureTextBBoxes(
           svgElement,
-          station.name,
+          hyphenations(station.name, network.hyphenation),
+          mapConfig.label.lineHeight ?? mapConfig.label.fontSize,
           labelStyles({
             textAnchor: props?.textAnchor,
             fontWeight: station.terminus ? 700 : undefined,
@@ -156,7 +158,14 @@ const polylinePoints = computed(() =>
           })
         "
       >
-        {{ pos.station.name }}
+        <tspan
+          v-for="(line, i) in pos.labelLines"
+          :key="line"
+          :x="pos.label.x"
+          :dy="i === 0 ? 0 : (mapConfig.label.lineHeight ?? mapConfig.label.fontSize)"
+        >
+          {{ line }}
+        </tspan>
       </text>
     </g>
   </svg>
