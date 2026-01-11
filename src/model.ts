@@ -67,15 +67,12 @@ export type Line = z.infer<typeof Line>;
 export const RawPadding = z
   .union([
     z.number().transform((p) => new Padding(p)),
-    z.record(z.enum(['x', 'y', 'top', 'bottom', 'left', 'right']), z.number()).transform(
-      (obj) =>
-        new Padding({
-          top: obj.top ?? obj.y ?? 0,
-          bottom: obj.bottom ?? obj.y ?? 0,
-          left: obj.left ?? obj.x ?? 0,
-          right: obj.right ?? obj.x ?? 0,
-        }),
-    ),
+    z.record(z.enum(['x', 'y', 'top', 'bottom', 'left', 'right']), z.number()).transform((obj) => ({
+      top: obj.top ?? obj.y ?? 0,
+      bottom: obj.bottom ?? obj.y ?? 0,
+      left: obj.left ?? obj.x ?? 0,
+      right: obj.right ?? obj.x ?? 0,
+    })),
   ])
   .meta({ id: 'Padding' });
 

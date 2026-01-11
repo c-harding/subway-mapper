@@ -17,7 +17,9 @@ watch([() => network], ([newNetwork]) => {
 });
 
 const layoutStrategyKeys = Object.keys(layoutStrategies) as (keyof typeof layoutStrategies)[];
-const layoutStrategyKey = ref<keyof typeof layoutStrategies>('vertical');
+const layoutStrategyKey = defineModel<keyof typeof layoutStrategies>('layoutStrategy', {
+  required: true,
+});
 const layoutStrategy = computed(() => layoutStrategies[layoutStrategyKey.value]);
 
 const showSafeAreas = ref(false);

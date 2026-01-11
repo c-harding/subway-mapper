@@ -115,6 +115,10 @@ export class Spacing {
       this.y = spacing.y ?? 0;
     }
   }
+
+  scale(factor: number): Spacing {
+    return new Spacing({ x: this.x * factor, y: this.y * factor });
+  }
 }
 
 export interface PointOffsetLike {

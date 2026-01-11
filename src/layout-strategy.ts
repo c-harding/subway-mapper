@@ -15,6 +15,7 @@ export interface StationPosition {
   labelLines: string[];
   variant: string;
   textAnchor?: 'start' | 'middle' | 'end';
+  dominantBaseline?: 'hanging' | 'middle' | 'alphabetic';
   safeAreas: readonly RangedPoint[];
 }
 
@@ -23,7 +24,10 @@ export interface LayoutStrategy {
     previous: StationPosition | undefined,
     station: Station,
     mapConfig: MapConfig,
-    getLabelBoxes: (props?: { textAnchor?: 'start' | 'middle' | 'end' }) => TextBox[],
+    getLabelBoxes: (props?: {
+      textAnchor?: 'start' | 'middle' | 'end';
+      dominantBaseline?: 'hanging' | 'middle' | 'alphabetic';
+    }) => TextBox[],
   ): StationPosition;
 }
 
@@ -135,37 +139,145 @@ const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy =>
   },
 });
 
-const denseHorizontalLayoutStrategy: LayoutStrategy = {
+const makeDiagonalLayoutStrategy = (
+  direction: 'ne' | 'nw' | 'se' | 'sw',
+  side: 'left' | 'right',
+): LayoutStrategy => ({
   nextPosition(previous, station, mapConfig, getLabelBoxes): StationPosition {
-    const positions = [
-      layoutStrategies.horizontal.nextPosition(previous, station, mapConfig, getLabelBoxes),
-      layoutStrategies.topHorizontal.nextPosition(previous, station, mapConfig, getLabelBoxes),
-    ];
+    const isPrimaryDiagonal = ['nw', 'se'].includes(direction);
+    const isBelow = isPrimaryDiagonal === (side === 'left');
 
-    const { pos } = positions.reduce(
-      (acc, pos) => {
-        const box = Box.bounds(
-          [pos.marker, pos.label, previous?.marker, previous?.label].filter(
-            Boolean,
-          ) as RangedPoint[],
-        );
-        if (box.width < acc.size || (box.width === acc.size && pos.variant === previous?.variant)) {
-          return { pos, size: box.width };
-        } else {
-          return acc;
-        }
-      },
-      { pos: undefined as StationPosition | undefined, size: Infinity },
-    );
+    const textAnchor = side === 'left' ? 'end' : 'start';
+    const dominantBaseline = isBelow ? 'hanging' : 'alphabetic';
 
-    return pos ?? positions[0]!;
+    const labelBoxes = getLabelBoxes({ textAnchor, dominantBaseline });
+    const labelBox = labelBoxes.at(0)!; // Use the box with the fewest lines
+
+    const offsetDirection = new PointOffset({
+      dx: direction.includes('e') ? 1 : -1,
+      dy: direction.includes('n') ? -1 : 1,
+    });
+
+    // Initial position: place at the same location as previous, or origin if first.
+    // Then offset to the right as needed to avoid overlaps.
+    let marker = new Point({
+      x: previous?.marker.x ?? 0,
+      y: previous?.marker.y ?? 0,
+    }).withSize({
+      width: totalStationWidth(mapConfig) / Math.SQRT2,
+      height: totalStationHeight(mapConfig) / Math.SQRT2,
+    });
+
+    const xUnit = side === 'right' ? 1 : -1;
+    const yUnit = isBelow ? 1 : -1;
+
+    let label = new Point({
+      x:
+        marker.x +
+        (xUnit * (totalStationWidth(mapConfig) / 2 + mapConfig.gap.markerLabel.y / 2)) / Math.SQRT2,
+      y:
+        marker.y +
+        (yUnit * (totalStationHeight(mapConfig) / 2 + mapConfig.gap.markerLabel.y / 2)) /
+          Math.SQRT2,
+    }).withSizeFromBox(labelBox);
+
+    if (previous) {
+      const offset = offsetDirection.scale(
+        Box.separationFactor(previous.safeAreas, [marker, label], offsetDirection),
+      );
+
+      marker = marker.offset(offset);
+      label = label.offset(offset);
+    }
+
+    return {
+      station,
+      labelLines: labelBox.lines,
+      marker,
+      label,
+      variant: `${direction}-${side}`,
+      textAnchor,
+      dominantBaseline,
+      safeAreas: [
+        marker.withPadding(mapConfig.spacing.marker.scale(Math.SQRT1_2)),
+        label.withPadding({
+          x: mapConfig.spacing.label.x,
+          y: mapConfig.gap.markerLabel.y * 2,
+        }),
+      ],
+    };
   },
+});
+
+const denseLayoutStrategy = (layouts: LayoutStrategy[]): LayoutStrategy => {
+  if (layouts.length === 0) {
+    throw new Error('At least one layout strategy must be provided');
+  }
+  return {
+    nextPosition(previous, station, mapConfig, getLabelBoxes) {
+      const positions = layouts.map((layout) =>
+        layout.nextPosition(previous, station, mapConfig, getLabelBoxes),
+      );
+
+      const { pos } = positions.reduce(
+        (acc, pos) => {
+          const box = Box.bounds(
+            [pos.marker, pos.label, previous?.marker, previous?.label].filter(
+              (point): point is RangedPoint => !!point,
+            ),
+          );
+          if (
+            box.width < acc.size ||
+            (box.width === acc.size && pos.variant === previous?.variant)
+          ) {
+            return { pos, size: box.width };
+          } else {
+            return acc;
+          }
+        },
+        { pos: undefined as StationPosition | undefined, size: Infinity },
+      );
+
+      return pos ?? positions[0]!;
+    },
+  };
 };
 
 export const layoutStrategies = {
-  vertical: makeVerticalLayoutStrategy('right'),
+  vertical: denseLayoutStrategy([
+    makeVerticalLayoutStrategy('right'),
+    makeVerticalLayoutStrategy('left'),
+  ]),
   leftVertical: makeVerticalLayoutStrategy('left'),
-  horizontal: makeHorizontalLayoutStrategy('bottom'),
+  rightVertical: makeVerticalLayoutStrategy('right'),
+  horizontal: denseLayoutStrategy([
+    makeHorizontalLayoutStrategy('bottom'),
+    makeHorizontalLayoutStrategy('top'),
+  ]),
+  bottomHorizontal: makeHorizontalLayoutStrategy('bottom'),
   topHorizontal: makeHorizontalLayoutStrategy('top'),
-  denseHorizontal: denseHorizontalLayoutStrategy,
+  diagonalNE: denseLayoutStrategy([
+    makeDiagonalLayoutStrategy('ne', 'right'),
+    makeDiagonalLayoutStrategy('ne', 'left'),
+  ]),
+  diagonalNELeft: makeDiagonalLayoutStrategy('ne', 'left'),
+  diagonalNERight: makeDiagonalLayoutStrategy('ne', 'right'),
+  diagonalNW: denseLayoutStrategy([
+    makeDiagonalLayoutStrategy('nw', 'right'),
+    makeDiagonalLayoutStrategy('nw', 'left'),
+  ]),
+  diagonalNWLeft: makeDiagonalLayoutStrategy('nw', 'left'),
+  diagonalNWRight: makeDiagonalLayoutStrategy('nw', 'right'),
+  diagonalSE: denseLayoutStrategy([
+    makeDiagonalLayoutStrategy('se', 'right'),
+    makeDiagonalLayoutStrategy('se', 'left'),
+  ]),
+  diagonalSELeft: makeDiagonalLayoutStrategy('se', 'left'),
+  diagonalSERight: makeDiagonalLayoutStrategy('se', 'right'),
+  diagonalSW: denseLayoutStrategy([
+    makeDiagonalLayoutStrategy('sw', 'right'),
+    makeDiagonalLayoutStrategy('sw', 'left'),
+  ]),
+  diagonalSWLeft: makeDiagonalLayoutStrategy('sw', 'left'),
+  diagonalSWRight: makeDiagonalLayoutStrategy('sw', 'right'),
 } satisfies Record<string, LayoutStrategy>;

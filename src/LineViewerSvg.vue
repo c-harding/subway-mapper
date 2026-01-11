@@ -42,13 +42,17 @@ const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), f
 
 const svg = useTemplateRef<SVGSVGElement>('svg');
 
-function labelStyles(props?: { textAnchor?: 'start' | 'middle' | 'end'; fontWeight?: number }) {
+function labelStyles(props?: {
+  textAnchor?: 'start' | 'middle' | 'end';
+  fontWeight?: number;
+  dominantBaseline?: 'hanging' | 'middle' | 'alphabetic';
+}) {
   return {
     fontFamily: fontFamily.value,
     fontSize: `${mapConfig.label.fontSize}px`,
     fontWeight: props?.fontWeight ?? mapConfig.label.fontWeight,
     textAnchor: props?.textAnchor ?? 'middle',
-    dominantBaseline: 'middle',
+    dominantBaseline: props?.dominantBaseline ?? 'middle',
   } as const;
 }
 
@@ -70,6 +74,7 @@ const svgProps = computed(() => {
           labelStyles({
             textAnchor: props?.textAnchor,
             fontWeight: station.terminus ? 700 : undefined,
+            dominantBaseline: props?.dominantBaseline,
           }),
         ),
       ),
@@ -169,6 +174,7 @@ const polylinePoints = computed(() =>
         :style="
           labelStyles({
             textAnchor: pos.textAnchor,
+            dominantBaseline: pos.dominantBaseline,
             fontWeight: pos.station.terminus ? 700 : undefined,
           })
         "
