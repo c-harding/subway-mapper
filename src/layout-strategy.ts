@@ -71,12 +71,10 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
       textAnchor,
       safeAreas: [
         marker.withPadding({
-          x: mapConfig.spacing.marker.x,
-          y: mapConfig.gap.markerLabel.y * 2,
+          y: mapConfig.spacing.marker.y,
         }),
         label.withPadding({
-          x: mapConfig.spacing.label.x,
-          y: mapConfig.gap.markerLabel.y * 2,
+          y: mapConfig.spacing.label.y,
         }),
       ],
     };

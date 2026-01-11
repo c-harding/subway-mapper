@@ -19,8 +19,8 @@ const { network, line, layoutStrategy } = defineProps<{
 const mapConfig: MapConfig = {
   padding: new Padding(10),
   spacing: {
-    marker: new Spacing(32),
-    label: new Spacing(15),
+    marker: new Spacing({ x: 32, y: 22 }),
+    label: new Spacing({ x: 15, y: 4 }),
   },
   gap: {
     markerLabel: new Spacing(2),
