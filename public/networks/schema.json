@@ -5,6 +5,31 @@
       "type": "string"
     },
     "font": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/FontNameOrReference"
+        }
+      ]
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Line"
+      }
+    },
+    "lineTypes": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/LineType"
+      }
+    }
+  },
+  "required": [
+    "lines"
+  ],
+  "id": "Network",
+  "definitions": {
+    "FontNameOrReference": {
       "anyOf": [
         {
           "description": "Google Fonts reference, starting with \"google-fonts:\"",
@@ -33,50 +58,123 @@
             "url"
           ]
         }
-      ]
+      ],
+      "id": "FontNameOrReference"
     },
-    "lines": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "color": {
-            "type": "string"
-          },
-          "stations": {
-            "type": "array",
-            "items": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "name": {
+    "Line": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "overlayColor": {
+          "type": "string"
+        },
+        "lineType": {
+          "type": "string"
+        },
+        "stations": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "lines": {
+                    "type": "array",
+                    "items": {
                       "type": "string"
                     }
-                  },
-                  "required": [
-                    "name"
-                  ]
+                  }
                 },
-                {
-                  "type": "string"
-                }
-              ]
-            }
+                "required": [
+                  "name"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
           }
+        }
+      },
+      "required": [
+        "name",
+        "color",
+        "stations"
+      ],
+      "id": "Line"
+    },
+    "LineType": {
+      "type": "object",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "enum": [
+            "oval",
+            "rectangle",
+            "pill"
+          ]
         },
-        "required": [
-          "name",
-          "color",
-          "stations"
-        ]
-      }
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "padding": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/Padding"
+            }
+          ]
+        },
+        "font": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/FontNameOrReference"
+            }
+          ]
+        },
+        "fontWeight": {
+          "type": "number"
+        },
+        "fontSize": {
+          "type": "number"
+        },
+        "baseLineShift": {
+          "type": "number"
+        }
+      },
+      "id": "LineType"
+    },
+    "Padding": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "required": [
+            "x",
+            "y",
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        }
+      ],
+      "id": "Padding"
     }
-  },
-  "required": [
-    "lines"
-  ]
+  }
 }

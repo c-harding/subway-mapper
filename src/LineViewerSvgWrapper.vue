@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue';
 import { layoutStrategies } from './layout-strategy';
+import LineNumberSvg from './LineNumberSvg.vue';
 import LineViewerSvg from './LineViewerSvg.vue';
 import type { Network } from './model';
-import { getFontName } from './util/font';
 
 const { network } = defineProps<{
   network: Network;
@@ -19,8 +19,6 @@ watch([() => network], ([newNetwork]) => {
 const layoutStrategyKeys = Object.keys(layoutStrategies) as (keyof typeof layoutStrategies)[];
 const layoutStrategyKey = ref<keyof typeof layoutStrategies>('vertical');
 const layoutStrategy = computed(() => layoutStrategies[layoutStrategyKey.value]);
-
-const fontFamily = computed(() => network.font && getFontName(network.font));
 </script>
 <template>
   <p>
@@ -29,8 +27,8 @@ const fontFamily = computed(() => network.font && getFontName(network.font));
     </button>
   </p>
 
-  <p :style="{ fontFamily }" :class="$style.lineSelection">
-    <label v-for="line in network.lines" :key="line.name" :style="{ color: line.color }">
+  <p :class="$style.lineSelection">
+    <label v-for="line in network.lines" :key="line.name">
       <input
         name="chosen-line"
         type="radio"
@@ -40,9 +38,10 @@ const fontFamily = computed(() => network.font && getFontName(network.font));
           console.log('Line selected:', line.name);
         "
       />
-      {{ line.name }}
+      <LineNumberSvg style="height: 1em" :network :line />
     </label>
   </p>
+
   <LineViewerSvg :network :line="chosenLine" :layoutStrategy :key="layoutStrategyKey" />
 </template>
 

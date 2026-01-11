@@ -4,10 +4,69 @@
     "font": "google-fonts:Asap:ital,wdth,wght@0,98,100..900",
     "lines": [
         {
+            "name": "U3",
+            "color": "#ec6725",
+            "overlayColor": "#ffffff",
+            "lineType": "U-Bahn",
+            "stations": [
+                {
+                    "name": "Moosach",
+                    "lines": [
+                        "U3"
+                    ]
+                },
+                "Moosacher St.-Martins-Platz",
+                "Olympia-Einkaufszentrum",
+                "Oberwiesenfeld",
+                "Olympiapark",
+                "Petuelring",
+                "Scheidplatz",
+                "Bonner Platz",
+                {
+                    "name": "Münchner Freiheit",
+                    "lines": [
+                        "U6"
+                    ]
+                },
+                "Giselastraße",
+                "Universität",
+                "Odeonsplatz",
+                "Marienplatz",
+                "Sendlinger Tor",
+                "Goetheplatz",
+                "Poccistraße",
+                {
+                    "name": "Implerstraße",
+                    "lines": [
+                        "U6"
+                    ]
+                },
+                "Brudermühlstraße",
+                "Thalkirchen (Tierpark)",
+                "Siemenswerke",
+                "Aidenbachstraße",
+                "Machtlfinger Straße",
+                "Basler Straße",
+                {
+                    "name": "Fürstenried West",
+                    "lines": [
+                        "U3"
+                    ]
+                }
+            ]
+        },
+        {
             "name": "U6",
             "color": "#0065ae",
+            "overlayColor": "#ffffff",
+            "lineType": "U-Bahn",
             "stations": [
-                "Garching-Forschungszentrum",
+                {
+                    "name": "Garching-Forschungszentrum",
+                    "lines": [
+                        "U6"
+                    ]
+                },
                 "Garching",
                 "Garching-Hochbrück",
                 "Fröttmaning",
@@ -17,7 +76,12 @@
                 "Alte Heide",
                 "Nordfriedhof",
                 "Dietlindenstraße",
-                "Münchner Freiheit",
+                {
+                    "name": "Münchner Freiheit",
+                    "lines": [
+                        "U3"
+                    ]
+                },
                 "Giselastraße",
                 "Universität",
                 "Odeonsplatz",
@@ -25,15 +89,35 @@
                 "Sendlinger Tor",
                 "Goetheplatz",
                 "Poccistraße",
-                "Implerstraße",
+                {
+                    "name": "Implerstraße",
+                    "lines": [
+                        "U3"
+                    ]
+                },
                 "Harras",
                 "Partnachplatz",
                 "Westpark",
                 "Holzapfelkreuth",
                 "Haderner Stern",
                 "Großhadern",
-                "Klinikum Großhadern"
+                {
+                    "name": "Klinikum Großhadern",
+                    "lines": [
+                        "U6"
+                    ]
+                }
             ]
         }
-    ]
+    ],
+    "lineTypes": {
+        "U-Bahn": {
+            "shape": "rectangle",
+            "width": 200,
+            "height": 100,
+            "font": "google-fonts:Hind:wght@600",
+            "fontSize": 100,
+            "baseLineShift": -15
+        }
+    }
 }

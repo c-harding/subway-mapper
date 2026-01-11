@@ -2,7 +2,7 @@
 import { computedAsync } from '@vueuse/core';
 import LineViewerSvgWrapper from './LineViewerSvgWrapper.vue';
 import { loadNetwork } from './loadNetwork';
-import LineViewer from './NetworkListView.vue';
+import NetworkListView from './NetworkListView.vue';
 import { useNetworkFonts } from './util/font';
 
 const networkUrl = '/networks/mvg.json';
@@ -13,7 +13,7 @@ useNetworkFonts(network);
 
 <template>
   <LineViewerSvgWrapper v-if="network" :network :key="network.name" />
-  <LineViewer v-if="network" :network />
+  <NetworkListView v-if="network" :network />
 </template>
 
 <style module></style>

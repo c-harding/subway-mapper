@@ -6,6 +6,7 @@ import type { MapConfig } from './config';
 import { type LayoutStrategy, type StationPosition } from './layout-strategy';
 import type { Line, Network } from './model';
 import { getFontName } from './util/font';
+import { measureTextBBox } from './util/svg';
 
 const { network, line, layoutStrategy } = defineProps<{
   network: Network;
@@ -49,28 +50,6 @@ function labelStyles(props?: { textAnchor?: 'start' | 'middle' | 'end'; fontWeig
   } as const;
 }
 
-function bboxText(
-  svg: SVGSVGElement,
-  text: string,
-  props?: { textAnchor?: 'start' | 'middle' | 'end'; fontWeight?: number },
-) {
-  const svgns = 'http://www.w3.org/2000/svg';
-  const data = document.createTextNode(text);
-
-  const textElement = document.createElementNS(svgns, 'text');
-  Object.assign(textElement.style, labelStyles({ textAnchor: props?.textAnchor }));
-
-  textElement.appendChild(data);
-
-  svg.appendChild(textElement);
-
-  const bbox = textElement.getBBox();
-
-  svg.removeChild(textElement);
-
-  return bbox;
-}
-
 const svgProps = computed(() => {
   if (!svg.value || !fontsLoaded.value) {
     return { positions: [] };
@@ -82,10 +61,14 @@ const svgProps = computed(() => {
   for (const station of line.stations) {
     positions.push(
       layoutStrategy.nextPosition(positions.at(-1), station, mapConfig, (props) =>
-        bboxText(svgElement, station.name, {
-          textAnchor: props?.textAnchor,
-          fontWeight: station.terminus ? 700 : undefined,
-        }),
+        measureTextBBox(
+          svgElement,
+          station.name,
+          labelStyles({
+            textAnchor: props?.textAnchor,
+            fontWeight: station.terminus ? 700 : undefined,
+          }),
+        ),
       ),
     );
   }
@@ -166,7 +149,6 @@ const polylinePoints = computed(() =>
         :key="pos.station.name"
         :x="pos.label.x"
         :y="pos.label.y"
-        :name="pos.station.name"
         :style="
           labelStyles({
             textAnchor: pos.textAnchor,
