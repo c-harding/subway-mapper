@@ -1,0 +1,26 @@
+{
+    "$schema": "./schema.json",
+    "font": "google-fonts:Asap:ital,wdth,wght@0,98,100..900",
+    "lines": [
+        {
+            "name": "U3",
+            "color": "#ec6725",
+            "overlayColor": "#ffffff"
+        },
+        {
+            "name": "U6",
+            "color": "#0065ae",
+            "overlayColor": "#ffffff"
+        }
+    ],
+    "lineTypes": {
+        "U-Bahn": {
+            "shape": "rectangle",
+            "width": 200,
+            "height": 100,
+            "font": "google-fonts:Hind:wght@600",
+            "fontSize": 100,
+            "baseLineShift": -15
+        }
+    }
+}

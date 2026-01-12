@@ -83,7 +83,7 @@ const r = computed(() => {
 });
 </script>
 <template>
-  <svg ref="svg" :viewBox="`0 0 ${width} ${height}`">
+  <svg ref="svg" :viewBox="`0 0 ${width} ${height}`" v-bind="$attrs">
     <rect :rx="r.x" :ry="r.y" :height :width :fill="line.color" />
     <text
       :x="width / 2"

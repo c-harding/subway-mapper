@@ -1,12 +1,9 @@
 {
     "$schema": "./schema.json",
     "name": "Munich U-Bahn",
-    "font": "google-fonts:Asap:ital,wdth,wght@0,98,100..900",
     "lines": [
         {
             "name": "U3",
-            "color": "#ec6725",
-            "overlayColor": "#ffffff",
             "lineType": "U-Bahn",
             "stations": [
                 {
@@ -57,8 +54,6 @@
         },
         {
             "name": "U6",
-            "color": "#0065ae",
-            "overlayColor": "#ffffff",
             "lineType": "U-Bahn",
             "stations": [
                 {
@@ -108,57 +103,37 @@
                     ]
                 }
             ],
-    "hyphenation": [
-        "Einkaufs~zentrum",
-        "Ober~wiesen~feld",
-        "Olympia~park",
-        "Petuel~ring",
-        "Scheid~platz",
-        "Gisela~straße",
-        "Odeons~platz",
-        "Marien~platz",
-        "Goethe~platz",
-        "Pocci~straße",
-        "Impler~straße",
-        "Brudermühl~straße",
-        "Thal~kirchen",
-        "Siemens~werke",
-        "Aidenbach~straße",
-        "Forschungs~zentrum",
-        "Kiefern~garten",
-        "Studenten~stadt",
-        "Nord~friedhof",
-        "Dietlinden~straße",
-        "Gisela~straße",
-        "Odeons~platz",
-        "Marien~platz",
-        "Goethe~platz",
-        "Pocci~straße",
-        "Impler~straße",
-        "Partnach~platz",
-        "Holzapfel~kreuth",
-        "Groß~hadern"
-    ],
-    "lineTypes": {
-        "U-Bahn": {
-            "shape": "rectangle",
-            "width": 200,
-            "height": 100,
-            "font": "google-fonts:Hind:wght@600",
-            "fontSize": 100,
-            "baseLineShift": -15
+            "hyphenation": [
+                "Einkaufs~zentrum",
+                "Ober~wiesen~feld",
+                "Olympia~park",
+                "Petuel~ring",
+                "Scheid~platz",
+                "Gisela~straße",
+                "Odeons~platz",
+                "Marien~platz",
+                "Goethe~platz",
+                "Pocci~straße",
+                "Impler~straße",
+                "Brudermühl~straße",
+                "Thal~kirchen",
+                "Siemens~werke",
+                "Aidenbach~straße",
+                "Forschungs~zentrum",
+                "Kiefern~garten",
+                "Studenten~stadt",
+                "Nord~friedhof",
+                "Dietlinden~straße",
+                "Gisela~straße",
+                "Odeons~platz",
+                "Marien~platz",
+                "Goethe~platz",
+                "Pocci~straße",
+                "Impler~straße",
+                "Partnach~platz",
+                "Holzapfel~kreuth",
+                "Groß~hadern"
+            ]
         }
-    }
-        }
-    ],
-    "lineTypes": {
-        "U-Bahn": {
-            "shape": "rectangle",
-            "width": 200,
-            "height": 100,
-            "font": "google-fonts:Hind:wght@600",
-            "fontSize": 100,
-            "baseLineShift": -15
-        }
-    }
+    ]
 }

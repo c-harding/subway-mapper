@@ -6,7 +6,8 @@ import NetworkListView from './NetworkListView.vue';
 import { useNetworkFonts } from './util/font';
 
 const networkUrl = '/networks/mvg.json';
-const network = computedAsync(() => loadNetwork(networkUrl));
+const mapUrl = '/maps/mvg.json';
+const network = computedAsync(() => loadNetwork(networkUrl, mapUrl));
 
 useNetworkFonts(network);
 </script>

@@ -11,7 +11,7 @@
     "lines": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/Line"
+        "$ref": "#/definitions/LineDisplay"
       }
     },
     "lineTypes": {
@@ -19,21 +19,12 @@
       "additionalProperties": {
         "$ref": "#/definitions/LineType"
       }
-    },
-    "name": {
-      "type": "string"
-    },
-    "hyphenation": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
     }
   },
   "required": [
     "lines"
   ],
-  "id": "Network",
+  "id": "NetworkDisplay",
   "definitions": {
     "FontNameOrReference": {
       "anyOf": [
@@ -67,7 +58,7 @@
       ],
       "id": "FontNameOrReference"
     },
-    "Line": {
+    "LineDisplay": {
       "type": "object",
       "properties": {
         "name": {
@@ -81,40 +72,12 @@
         },
         "lineType": {
           "type": "string"
-        },
-        "stations": {
-          "type": "array",
-          "items": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "lines": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "required": [
-                  "name"
-                ]
-              },
-              {
-                "type": "string"
-              }
-            ]
-          }
         }
       },
       "required": [
-        "name",
-        "stations"
+        "name"
       ],
-      "id": "Line"
+      "id": "LineDisplay"
     },
     "LineType": {
       "type": "object",

@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { Padding } from './geometry';
+import { Padding } from './geometry/Padding.ts'; // This file is used by Node, so must use .ts extension
 
 export const StationObject = z.object({
   name: z.string(),
@@ -48,20 +48,23 @@ export const FontNameOrReference = z
   .meta({ id: 'FontNameOrReference' });
 export type FontNameOrReference = z.infer<typeof FontNameOrReference>;
 
-export const Line = z
+export const LineDisplay = z
   .object({
     name: z.string(),
-    color: z.string(),
+    color: z.string().optional(),
     overlayColor: z.string().optional(),
     lineType: z.string().optional(),
-    stations: z.array(RawStation).transform((stations) =>
-      stations.map<Station>((station, i) => ({
-        ...station,
-        terminus: i === 0 || i === stations.length - 1,
-      })),
-    ),
   })
-  .meta({ id: 'Line' });
+  .meta({ id: 'LineDisplay' });
+
+export const Line = LineDisplay.extend({
+  stations: z.array(RawStation).transform((stations) =>
+    stations.map<Station>((station, i) => ({
+      ...station,
+      terminus: i === 0 || i === stations.length - 1,
+    })),
+  ),
+}).meta({ id: 'Line' });
 export type Line = z.infer<typeof Line>;
 
 export const RawPadding = z
@@ -90,16 +93,23 @@ export const LineType = z
   .meta({ id: 'LineType' });
 export type LineType = z.infer<typeof LineType>;
 
-export const Network = z
+export const NetworkDisplay = z
   .object({
-    name: z.string().optional(),
     font: FontNameOrReference.optional(),
-    lines: z.array(Line),
+    lines: z.array(LineDisplay),
     lineTypes: z.record(z.string(), LineType).optional(),
-    hyphenation: z
-      .array(z.string())
-      .transform((arr) => new Map(arr.map((item) => [item.replaceAll('~', ''), item])))
-      .optional(),
   })
-  .meta({ id: 'Network' });
+  .meta({ id: 'NetworkDisplay' });
+export type NetworkDisplay = z.infer<typeof NetworkDisplay>;
+
+export const Network = NetworkDisplay.extend({
+  name: z.string().optional(),
+  font: FontNameOrReference.optional(),
+  lines: z.array(Line),
+  lineTypes: z.record(z.string(), LineType).optional(),
+  hyphenation: z
+    .array(z.string())
+    .transform((arr) => new Map(arr.map((item) => [item.replaceAll('~', ''), item])))
+    .optional(),
+}).meta({ id: 'Network' });
 export type Network = z.infer<typeof Network>;
