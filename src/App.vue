@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computedAsync } from '@vueuse/core';
-import LineViewerSvgWrapper from './LineViewerSvgWrapper.vue';
 import { loadNetwork } from './loadNetwork';
 import NetworkListView from './NetworkListView.vue';
+import SvgLineViewerWrapper from './SvgLineViewerWrapper.vue';
 import { useNetworkFonts } from './util/font';
 
 const networkUrl = '/networks/mvg.json';
@@ -13,7 +13,7 @@ useNetworkFonts(network);
 </script>
 
 <template>
-  <LineViewerSvgWrapper v-if="network" :network :key="network.name" />
+  <SvgLineViewerWrapper v-if="network" :network :key="network.name" />
   <NetworkListView v-if="network" :network />
 </template>
 

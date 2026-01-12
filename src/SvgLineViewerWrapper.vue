@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue';
 import { type Direction, type Side } from './layout-strategy';
-import LineNumberSvg from './LineNumberSvg.vue';
-import LineViewerSvg from './LineViewerSvg.vue';
 import type { Network } from './model';
+import SvgLineNumber from './SvgLineNumber.vue';
+import SvgLineViewer from './SvgLineViewer.vue';
 
 const { network } = defineProps<{
   network: Network;
@@ -89,7 +89,7 @@ const showSafeAreas = ref(false);
         :checked="chosenLine === line"
         @change="chosenLine = line"
       />
-      <LineNumberSvg style="height: 1em" :network :line />
+      <SvgLineNumber style="height: 1em" :network :line />
     </label>
   </p>
 
@@ -97,7 +97,7 @@ const showSafeAreas = ref(false);
     <label><input type="checkbox" v-model="showSafeAreas" /> Show safe areas</label>
   </p>
 
-  <LineViewerSvg
+  <SvgLineViewer
     :network
     :line="chosenLine"
     :showSafeAreas

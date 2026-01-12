@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import LineNumberSvg from './LineNumberSvg.vue';
+import SvgLineNumber from './SvgLineNumber.vue';
 import type { Network } from './model';
 import { getFontName } from './util/font';
 import { hyphenationAlternatives } from './util/hyphenation';
@@ -31,7 +31,7 @@ const fontFamily = computed(() => network.font && getFontName(network.font));
         </span>
         <template v-for="otherLine of station.lines" :key="otherLine">
           {{ ' ' }}
-          <LineNumberSvg :network :line="network.lines.find((line) => line.name === otherLine)!" />
+          <SvgLineNumber :network :line="network.lines.find((line) => line.name === otherLine)!" />
         </template>
       </li>
     </ul>
