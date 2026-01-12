@@ -66,18 +66,23 @@ const svgProps = computed(() => {
 
   for (const station of line.stations) {
     positions.push(
-      layoutStrategy.nextPosition(positions.at(-1), station, mapConfig, (props) =>
-        measureTextBBoxes(
-          svgElement,
-          hyphenations(station.name, network.hyphenation),
-          mapConfig.label.lineHeight ?? mapConfig.label.fontSize,
-          labelStyles({
-            textAnchor: props?.textAnchor,
-            fontWeight: station.terminus ? 700 : undefined,
-            dominantBaseline: props?.dominantBaseline,
-          }),
-        ),
-      ),
+      layoutStrategy.nextPosition({
+        station,
+        mapConfig,
+        previous: positions.at(-1),
+        allPrevious: positions.slice(),
+        getLabelBoxes: (props) =>
+          measureTextBBoxes(
+            svgElement,
+            hyphenations(station.name, network.hyphenation),
+            mapConfig.label.lineHeight ?? mapConfig.label.fontSize,
+            labelStyles({
+              textAnchor: props?.textAnchor,
+              fontWeight: station.terminus ? 700 : undefined,
+              dominantBaseline: props?.dominantBaseline,
+            }),
+          ),
+      }),
     );
   }
 

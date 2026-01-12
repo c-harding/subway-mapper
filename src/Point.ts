@@ -173,6 +173,10 @@ export class Box {
     return this.max.y - this.min.y;
   }
 
+  get area(): number {
+    return this.width * this.height;
+  }
+
   toBox(): Box {
     return this;
   }
@@ -313,6 +317,10 @@ class RangedPoint extends Point implements Box {
 
   get height(): number {
     return this.box.height;
+  }
+
+  get area(): number {
+    return this.box.area;
   }
 
   toBox(): Box {

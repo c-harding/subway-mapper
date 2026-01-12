@@ -20,19 +20,20 @@ export interface StationPosition {
 }
 
 export interface LayoutStrategy {
-  nextPosition(
-    previous: StationPosition | undefined,
-    station: Station,
-    mapConfig: MapConfig,
+  nextPosition(props: {
+    station: Station;
+    previous: StationPosition | undefined;
+    allPrevious: StationPosition[];
+    mapConfig: MapConfig;
     getLabelBoxes: (props?: {
       textAnchor?: 'start' | 'middle' | 'end';
       dominantBaseline?: 'hanging' | 'middle' | 'alphabetic';
-    }) => TextBox[],
-  ): StationPosition;
+    }) => TextBox[];
+  }): StationPosition;
 }
 
 const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => ({
-  nextPosition(previous, station, mapConfig, getLabelBoxes): StationPosition {
+  nextPosition({ station, previous, allPrevious, mapConfig, getLabelBoxes }): StationPosition {
     const textAnchor = side === 'left' ? 'end' : 'start';
     const labelBoxes = getLabelBoxes({ textAnchor });
     const labelBox = labelBoxes.at(0)!; // Use the box with the fewest lines
@@ -57,9 +58,15 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
     }).withSizeFromBox(labelBox);
 
     if (previous) {
+      const previousOfVariant = allPrevious.findLast((pos) => pos.variant === side);
+
       const offsetDirection = new PointOffset({ dy: 1 });
       const offset = offsetDirection.scale(
-        Box.separationFactor(previous.safeAreas, [marker, label], offsetDirection),
+        Box.separationFactor(
+          [...previous.safeAreas, ...(previousOfVariant?.safeAreas ?? [])],
+          [marker, label],
+          offsetDirection,
+        ),
       );
 
       marker = marker.offset(offset);
@@ -86,7 +93,7 @@ const makeVerticalLayoutStrategy = (side: 'left' | 'right'): LayoutStrategy => (
 });
 
 const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy => ({
-  nextPosition(previous, station, mapConfig, getLabelBoxes): StationPosition {
+  nextPosition({ station, previous, allPrevious, mapConfig, getLabelBoxes }): StationPosition {
     const labelBoxes = getLabelBoxes();
     const labelBox = labelBoxes.at(-1)!; // Use the box with the most lines
 
@@ -110,9 +117,15 @@ const makeHorizontalLayoutStrategy = (side: 'top' | 'bottom'): LayoutStrategy =>
       .offset({ dy: side === 'top' ? -labelBox.height - labelBox.y : -labelBox.y });
 
     if (previous) {
+      const previousOfVariant = allPrevious.findLast((pos) => pos.variant === side);
+
       const offsetDirection = new PointOffset({ dx: 1 });
       const offset = offsetDirection.scale(
-        Box.separationFactor(previous.safeAreas, [marker, label], offsetDirection),
+        Box.separationFactor(
+          [...previous.safeAreas, ...(previousOfVariant?.safeAreas ?? [])],
+          [marker, label],
+          offsetDirection,
+        ),
       );
 
       marker = marker.offset(offset);
@@ -143,7 +156,9 @@ const makeDiagonalLayoutStrategy = (
   direction: 'ne' | 'nw' | 'se' | 'sw',
   side: 'left' | 'right',
 ): LayoutStrategy => ({
-  nextPosition(previous, station, mapConfig, getLabelBoxes): StationPosition {
+  nextPosition({ previous, allPrevious, station, mapConfig, getLabelBoxes }): StationPosition {
+    const variant = `${direction}-${side}`;
+
     const isPrimaryDiagonal = ['nw', 'se'].includes(direction);
     const isBelow = isPrimaryDiagonal === (side === 'left');
 
@@ -179,11 +194,23 @@ const makeDiagonalLayoutStrategy = (
         marker.y +
         (yUnit * (totalStationHeight(mapConfig) / 2 + mapConfig.gap.markerLabel.y / 2)) /
           Math.SQRT2,
-    }).withSizeFromBox(labelBox);
+    })
+      .withSizeFromBox(labelBox)
+      .offset({
+        dy: isBelow
+          ? 0
+          : -(mapConfig.label.lineHeight ?? mapConfig.label.fontSize) * (labelBox.lines.length - 1),
+      });
 
     if (previous) {
+      const previousOfVariant = allPrevious.findLast((pos) => pos.variant === variant);
+
       const offset = offsetDirection.scale(
-        Box.separationFactor(previous.safeAreas, [marker, label], offsetDirection),
+        Box.separationFactor(
+          [...previous.safeAreas, ...(previousOfVariant?.safeAreas ?? [])],
+          [marker, label],
+          offsetDirection,
+        ),
       );
 
       marker = marker.offset(offset);
@@ -195,7 +222,7 @@ const makeDiagonalLayoutStrategy = (
       labelLines: labelBox.lines,
       marker,
       label,
-      variant: `${direction}-${side}`,
+      variant,
       textAnchor,
       dominantBaseline,
       safeAreas: [
@@ -214,28 +241,23 @@ const denseLayoutStrategy = (layouts: LayoutStrategy[]): LayoutStrategy => {
     throw new Error('At least one layout strategy must be provided');
   }
   return {
-    nextPosition(previous, station, mapConfig, getLabelBoxes) {
-      const positions = layouts.map((layout) =>
-        layout.nextPosition(previous, station, mapConfig, getLabelBoxes),
-      );
+    nextPosition(props) {
+      const positions = layouts.map((layout) => layout.nextPosition(props));
+
+      const { previous } = props;
 
       const { pos } = positions.reduce(
         (acc, pos) => {
           const box = Box.bounds(
-            [pos.marker, pos.label, previous?.marker, previous?.label].filter(
-              (point): point is RangedPoint => !!point,
-            ),
+            [pos.marker, previous?.marker].filter((point): point is RangedPoint => !!point),
           );
-          if (
-            box.width < acc.size ||
-            (box.width === acc.size && pos.variant === previous?.variant)
-          ) {
-            return { pos, size: box.width };
+          if (box.area < acc.area || (box.area === acc.area && pos.variant === previous?.variant)) {
+            return { pos, area: box.area };
           } else {
             return acc;
           }
         },
-        { pos: undefined as StationPosition | undefined, size: Infinity },
+        { pos: undefined as StationPosition | undefined, area: Infinity },
       );
 
       return pos ?? positions[0]!;

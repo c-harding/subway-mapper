@@ -18,7 +18,7 @@ A project for creating subway maps in SVG, implemented in Vue 3.
     - Determine minimum length
   - [ ] Initially, allow the user to specify a target length for the line
   - [ ] Later, optimize for overall map layout
-- [ ] Support diagonals in line segments
+- [x] Support diagonals in line segments
 - [ ] Support different angles per line segment
   - [ ] Consider how to represent in data model, particularly with support for multiple lines sharing segments
     - [ ] Ideally keep this independent of the base line information
