@@ -1,3 +1,6 @@
+import { Padding, type PaddingLike } from './Padding';
+import { PointOffset, type PointOffsetLike } from './PointOffset';
+
 export class Point {
   readonly x: number;
   readonly y: number;
@@ -67,83 +70,6 @@ export class Point {
 
   toBox(): Box {
     return new Box(this, this);
-  }
-}
-
-type PaddingX =
-  | { left?: number; right?: number; x?: undefined }
-  | { x?: number; left?: undefined; right?: undefined };
-type PaddingY =
-  | { top?: number; bottom?: number; y?: undefined }
-  | { y?: number; top?: undefined; bottom?: undefined };
-
-type PaddingLike = (PaddingX & PaddingY) | number;
-
-export class Padding {
-  readonly top: number;
-  readonly bottom: number;
-  readonly left: number;
-  readonly right: number;
-
-  constructor(padding: PaddingLike) {
-    if (typeof padding === 'number') {
-      this.top = padding;
-      this.bottom = padding;
-      this.left = padding;
-      this.right = padding;
-    } else {
-      this.top = padding.top ?? padding.y ?? 0;
-      this.bottom = padding.bottom ?? padding.y ?? 0;
-      this.left = padding.left ?? padding.x ?? 0;
-      this.right = padding.right ?? padding.x ?? 0;
-    }
-  }
-}
-
-type SpacingLike = { x?: number; y?: number } | number;
-
-export class Spacing {
-  readonly x: number;
-  readonly y: number;
-
-  constructor(spacing: SpacingLike) {
-    if (typeof spacing === 'number') {
-      this.x = spacing;
-      this.y = spacing;
-    } else {
-      this.x = spacing.x ?? 0;
-      this.y = spacing.y ?? 0;
-    }
-  }
-
-  scale(factor: number): Spacing {
-    return new Spacing({ x: this.x * factor, y: this.y * factor });
-  }
-}
-
-export interface PointOffsetLike {
-  dx?: number;
-  dy?: number;
-}
-
-export class PointOffset implements PointOffsetLike {
-  readonly dx: number;
-  readonly dy: number;
-
-  constructor(dx: number, dy: number);
-  constructor(props: PointOffsetLike);
-  constructor(...args: [number, number] | [PointOffsetLike]) {
-    if (args.length === 1) {
-      this.dx = args[0].dx ?? 0;
-      this.dy = args[0].dy ?? 0;
-    } else {
-      this.dx = args[0];
-      this.dy = args[1];
-    }
-  }
-
-  scale(factor: number): PointOffset {
-    return new PointOffset(this.dx * factor, this.dy * factor);
   }
 }
 

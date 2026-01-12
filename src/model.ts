@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { Padding } from './Point';
+import { Padding } from './geometry';
 
 export const StationObject = z.object({
   name: z.string(),

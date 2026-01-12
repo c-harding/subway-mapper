@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computedAsync } from '@vueuse/core';
 import { computed, useTemplateRef } from 'vue';
-import { Box, Padding, Spacing } from './Point';
 import type { MapConfig } from './config';
+import { Box, Padding, Spacing } from './geometry';
 import { type LayoutStrategy, type StationPosition } from './layout-strategy';
 import type { Line, Network } from './model';
 import { getFontName } from './util/font';

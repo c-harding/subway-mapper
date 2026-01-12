@@ -1,6 +1,6 @@
 import type { MapConfig } from './config';
+import { Box, Point, PointOffset, type RangedPoint } from './geometry';
 import type { Station } from './model';
-import { Box, Point, PointOffset, type RangedPoint } from './Point';
 import type { TextBox } from './util/svg';
 
 const totalStationWidth = (mapConfig: MapConfig) =>

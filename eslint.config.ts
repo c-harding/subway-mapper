@@ -1,11 +1,11 @@
-import { globalIgnores } from 'eslint/config';
+import skipFormatting from '@vue/eslint-config-prettier/skip-formatting';
 import {
   configureVueProject,
   defineConfigWithVueTs,
   vueTsConfigs,
 } from '@vue/eslint-config-typescript';
 import pluginVue from 'eslint-plugin-vue';
-import skipFormatting from '@vue/eslint-config-prettier/skip-formatting';
+import { globalIgnores } from 'eslint/config';
 
 configureVueProject({
   scriptLangs: ['ts', 'tsx'],

@@ -1,4 +1,4 @@
-import type { Padding, Spacing } from './Point';
+import type { Padding, Spacing } from './geometry';
 
 export interface MapConfig {
   padding: Padding;
