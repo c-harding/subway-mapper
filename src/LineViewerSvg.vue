@@ -2,18 +2,22 @@
 import { computedAsync } from '@vueuse/core';
 import { computed, useTemplateRef } from 'vue';
 import type { MapConfig } from './config';
-import { Box, Padding, Spacing } from './geometry';
-import { type LayoutStrategy, type StationPosition } from './layout-strategy';
+import { BoundedBox, Box, Padding, Spacing } from './geometry';
+import { layoutLine, type Direction, type Side, type StationPosition } from './layout-strategy';
 import type { Line, Network } from './model';
 import { getFontName } from './util/font';
 import { hyphenations } from './util/hyphenation';
 import { measureTextBBoxes } from './util/svg';
 
-const { network, line, layoutStrategy } = defineProps<{
+const { network, line, direction, initialSide, compact, maxWidth, maxHeight } = defineProps<{
   network: Network;
   line: Line;
-  layoutStrategy: LayoutStrategy;
   showSafeAreas?: boolean;
+  direction: Direction;
+  initialSide: Side;
+  compact: boolean;
+  maxWidth?: number;
+  maxHeight?: number;
 }>();
 
 const mapConfig: MapConfig = {
@@ -56,22 +60,27 @@ function labelStyles(props?: {
   } as const;
 }
 
-const svgProps = computed(() => {
-  if (!svg.value || !fontsLoaded.value) {
-    return { positions: [] };
-  }
-  const svgElement = svg.value;
+const svgProps = computed(
+  ():
+    | { status: 'loading' }
+    | { status: 'success'; positions: readonly StationPosition[]; bounds: Box }
+    | { status: 'error'; error: unknown } => {
+    if (!svg.value || !fontsLoaded.value) {
+      return { status: 'loading' };
+    }
+    const svgElement = svg.value;
 
-  const positions: StationPosition[] = [];
-
-  for (const station of line.stations) {
-    positions.push(
-      layoutStrategy.nextPosition({
-        station,
+    try {
+      const positions = layoutLine({
+        stations: line.stations,
+        initialSide,
+        side: initialSide,
+        direction,
         mapConfig,
-        previous: positions.at(-1),
-        allPrevious: positions.slice(),
-        getLabelBoxes: (props) =>
+        debugDescription: line.name,
+        compact,
+        bounds: new BoundedBox({ maxWidth, maxHeight }),
+        getLabelBoxes: (station, props) =>
           measureTextBBoxes(
             svgElement,
             hyphenations(station.name, network.hyphenation),
@@ -82,117 +91,125 @@ const svgProps = computed(() => {
               dominantBaseline: props?.dominantBaseline,
             }),
           ),
-      }),
-    );
-  }
+      });
 
-  const bounds = Box.bounds(positions.flatMap((pos) => [pos.marker, pos.label]));
+      const bounds = Box.bounds(...positions.flatMap((pos) => [pos.marker, pos.label]));
 
-  return { positions, bounds };
-});
+      return { status: 'success', positions, bounds };
+    } catch (error) {
+      console.error(`Error laying out line ${line.name}:`, error);
+      return { status: 'error', error };
+    }
+  },
+);
 
 const viewBox = computed(() => {
-  const bounds = svgProps.value.bounds;
-  if (!bounds) {
+  if (svgProps.value.status !== 'success') {
     return undefined;
   }
 
-  const padded = bounds.withPadding(mapConfig.padding);
+  const padded = svgProps.value.bounds.withPadding(mapConfig.padding);
 
   return `${padded.min.x} ${padded.min.y} ${padded.width} ${padded.height}`;
 });
 
 const polylinePoints = computed(() =>
-  svgProps.value.positions.map((pos) => `${pos.marker.x},${pos.marker.y}`).join(' '),
+  svgProps.value.status === 'success'
+    ? svgProps.value.positions.map((pos) => `${pos.marker.x},${pos.marker.y}`).join(' ')
+    : undefined,
 );
 </script>
 <template>
   <svg ref="svg" :viewBox>
-    <g id="safeAreas" v-if="showSafeAreas">
-      <template v-for="pos in svgProps.positions" :key="pos.station.name">
-        <rect
-          v-for="(safeArea, i) in pos.safeAreas"
-          :key="i"
-          :x="safeArea.min.x"
-          :y="safeArea.min.y"
-          :width="safeArea.width"
-          :height="safeArea.height"
-          fill="red"
-          fill-opacity="0.2"
+    <template v-if="svgProps.status === 'success'">
+      <g id="safeAreas" v-if="showSafeAreas">
+        <template v-for="pos in svgProps.positions" :key="pos.station.name">
+          <rect
+            v-for="(safeArea, i) in pos.safeAreas"
+            :key="i"
+            :x="safeArea.min.x"
+            :y="safeArea.min.y"
+            :width="safeArea.width"
+            :height="safeArea.height"
+            fill="red"
+            fill-opacity="0.2"
+          />
+        </template>
+      </g>
+      <g id="lines-background">
+        <polyline
+          :points="polylinePoints"
+          stroke="white"
+          :stroke-width="mapConfig.lineWidth + mapConfig.marker.strokeWidth * 2"
+          stroke-linecap="butt"
+          fill="none"
         />
-      </template>
-    </g>
-    <g id="lines-background">
-      <polyline
-        :points="polylinePoints"
-        stroke="white"
-        :stroke-width="mapConfig.lineWidth + mapConfig.marker.strokeWidth * 2"
-        stroke-linecap="butt"
-        fill="none"
-      />
-    </g>
-    <g id="station-markers-background">
-      <circle
-        v-for="pos in svgProps.positions"
-        :key="pos.station.name"
-        :cx="pos.marker.x"
-        :cy="pos.marker.y"
-        :r="mapConfig.marker.radius + mapConfig.marker.strokeWidth * 2"
-        fill="white"
-      />
-    </g>
-    <g id="lines">
-      <polyline
-        :points="polylinePoints"
-        :stroke="line.color"
-        :stroke-width="mapConfig.lineWidth"
-        stroke-linecap="round"
-        fill="none"
-      />
-    </g>
-    <g id="station-markers-line">
-      <circle
-        v-for="pos in svgProps.positions"
-        :key="pos.station.name"
-        :cx="pos.marker.x"
-        :cy="pos.marker.y"
-        :r="mapConfig.marker.radius + mapConfig.marker.strokeWidth"
-        fill="black"
-      />
-    </g>
-    <g id="station-markers-fill">
-      <circle
-        v-for="pos in svgProps.positions"
-        :key="pos.station.name"
-        :cx="pos.marker.x"
-        :cy="pos.marker.y"
-        :r="mapConfig.marker.radius"
-        fill="white"
-      />
-    </g>
-    <g id="station-labels">
-      <text
-        v-for="pos in svgProps.positions"
-        :key="pos.station.name"
-        :x="pos.label.x"
-        :y="pos.label.y"
-        :style="
-          labelStyles({
-            textAnchor: pos.textAnchor,
-            dominantBaseline: pos.dominantBaseline,
-            fontWeight: pos.station.terminus ? 700 : undefined,
-          })
-        "
-      >
-        <tspan
-          v-for="(line, i) in pos.labelLines"
-          :key="line"
+      </g>
+      <g id="station-markers-background">
+        <circle
+          v-for="pos in svgProps.positions"
+          :key="pos.station.name"
+          :cx="pos.marker.x"
+          :cy="pos.marker.y"
+          :r="mapConfig.marker.radius + mapConfig.marker.strokeWidth * 2"
+          fill="white"
+        />
+      </g>
+      <g id="lines">
+        <polyline
+          :points="polylinePoints"
+          :stroke="line.color"
+          :stroke-width="mapConfig.lineWidth"
+          stroke-linecap="round"
+          fill="none"
+        />
+      </g>
+      <g id="station-markers-line">
+        <circle
+          v-for="pos in svgProps.positions"
+          :key="pos.station.name"
+          :cx="pos.marker.x"
+          :cy="pos.marker.y"
+          :r="mapConfig.marker.radius + mapConfig.marker.strokeWidth"
+          fill="black"
+        />
+      </g>
+      <g id="station-markers-fill">
+        <circle
+          v-for="pos in svgProps.positions"
+          :key="pos.station.name"
+          :cx="pos.marker.x"
+          :cy="pos.marker.y"
+          :r="mapConfig.marker.radius"
+          fill="white"
+        />
+      </g>
+      <g id="station-labels">
+        <text
+          v-for="pos in svgProps.positions"
+          :key="pos.station.name"
           :x="pos.label.x"
-          :dy="i === 0 ? 0 : (mapConfig.label.lineHeight ?? mapConfig.label.fontSize)"
+          :y="pos.label.y"
+          :style="
+            labelStyles({
+              textAnchor: pos.textAnchor,
+              dominantBaseline: pos.dominantBaseline,
+              fontWeight: pos.station.terminus ? 700 : undefined,
+            })
+          "
         >
-          {{ line }}
-        </tspan>
-      </text>
-    </g>
+          <tspan
+            v-for="(line, i) in pos.labelLines"
+            :key="line"
+            :x="pos.label.x"
+            :dy="i === 0 ? 0 : (mapConfig.label.lineHeight ?? mapConfig.label.fontSize)"
+          >
+            {{ line }}
+          </tspan>
+        </text>
+      </g>
+    </template>
   </svg>
+  <pre v-if="svgProps.status === 'error'">Error: {{ svgProps.error }}</pre>
+  <p v-if="svgProps.status === 'loading'">Loading...</p>
 </template>

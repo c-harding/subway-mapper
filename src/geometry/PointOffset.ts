@@ -22,4 +22,11 @@ export class PointOffset implements PointOffsetLike {
   scale(factor: number): PointOffset {
     return new PointOffset(this.dx * factor, this.dy * factor);
   }
+
+  // Return true if both lines are parallel and going in the same direction
+  parallelInSameDirection(other: PointOffsetLike): boolean {
+    const crossProduct = this.dx * (other.dy ?? 0) - this.dy * (other.dx ?? 0);
+    const dotProduct = this.dx * (other.dx ?? 0) + this.dy * (other.dy ?? 0);
+    return crossProduct === 0 && dotProduct > 0;
+  }
 }

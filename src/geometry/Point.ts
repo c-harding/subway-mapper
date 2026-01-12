@@ -5,6 +5,8 @@ export class Point {
   readonly x: number;
   readonly y: number;
 
+  static readonly ORIGIN = new Point(0, 0);
+
   constructor(x: number, y: number);
   constructor(coords: { x: number; y: number });
   constructor(...args: [number, number] | [{ x: number; y: number }]) {
@@ -15,6 +17,10 @@ export class Point {
       this.x = args[0];
       this.y = args[1];
     }
+  }
+
+  with(props: { x?: number; y?: number }): Point {
+    return new Point(props.x ?? this.x, props.y ?? this.y);
   }
 
   withRange(range: { minX: number; minY: number; maxX: number; maxY: number }): RangedPoint {
@@ -73,6 +79,13 @@ export class Point {
   }
 }
 
+export interface BoxInput {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
 export class Box {
   readonly min: Point;
   readonly max: Point;
@@ -103,11 +116,27 @@ export class Box {
     return this.width * this.height;
   }
 
+  offset(dx: number, dy: number): Box;
+  offset(props: PointOffsetLike): Box;
+  offset(...args: [number, number] | [PointOffsetLike]): Box {
+    const [dx, dy] = args.length === 1 ? [args[0].dx ?? 0, args[0].dy ?? 0] : args;
+    return new Box(this.min.offset(dx, dy), this.max.offset(dx, dy));
+  }
+
+  with(props: { minX?: number; minY?: number; maxX?: number; maxY?: number }): Box {
+    return new Box({
+      minX: props.minX ?? this.min.x,
+      minY: props.minY ?? this.min.y,
+      maxX: props.maxX ?? this.max.x,
+      maxY: props.maxY ?? this.max.y,
+    });
+  }
+
   toBox(): Box {
     return this;
   }
 
-  static bounds(points: (Point | Box)[]): Box {
+  static bounds(...points: (Point | Box)[]): Box {
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -251,6 +280,28 @@ class RangedPoint extends Point implements Box {
 
   toBox(): Box {
     return this.box;
+  }
+
+  toPoint(): Point {
+    return new Point(this.x, this.y);
+  }
+
+  with(props: {
+    x?: number;
+    y?: number;
+    minX?: number;
+    minY?: number;
+    maxX?: number;
+    maxY?: number;
+  }): RangedPoint {
+    return new RangedPoint({
+      x: props.x ?? this.x,
+      y: props.y ?? this.y,
+      minX: props.minX ?? this.min.x,
+      minY: props.minY ?? this.min.y,
+      maxX: props.maxX ?? this.max.x,
+      maxY: props.maxY ?? this.max.y,
+    });
   }
 
   withPadding(paddingLike: PaddingLike): RangedPoint {
