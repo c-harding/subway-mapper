@@ -1,4 +1,5 @@
 import { type OnCleanup, type WatchCallback } from '@vue/reactivity';
+import { computedAsync } from '@vueuse/core';
 import * as uuid from 'uuid';
 import {
   isReactive,
@@ -9,6 +10,8 @@ import {
   type WatchOptions,
 } from 'vue';
 import { FontReference, Network } from '../model';
+
+export const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), false);
 
 export function useNetworkFonts(network: MaybeRefOrGetter<Network | undefined>) {
   watchMaybeRefOrGetter(

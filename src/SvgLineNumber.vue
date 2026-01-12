@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computedAsync } from '@vueuse/core';
-import { computed, useTemplateRef } from 'vue';
+import { computed } from 'vue';
 import type { Line, Network } from './model';
 import { getFontName } from './util/font';
-import { measureTextBBox, measureTextHeight } from './util/svg';
+import { useSvgMeasurement } from './util/svg';
 
 const { network, line } = defineProps<{
   network: Network;
@@ -20,10 +19,6 @@ const font = computed(() => {
 
 const fontFamily = computed(() => font.value && getFontName(font.value));
 
-const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), false);
-
-const svg = useTemplateRef<SVGSVGElement>('svg');
-
 const labelStyles = computed(
   () =>
     ({
@@ -35,18 +30,14 @@ const labelStyles = computed(
     }) as const,
 );
 
+const svgMeasurement = useSvgMeasurement();
+
 const textBBox = computed(() => {
-  if (!svg.value || !fontsLoaded.value) {
-    return null;
-  }
-  return measureTextBBox(svg.value!, line.name, labelStyles);
+  return svgMeasurement.textBBox(line.name, labelStyles);
 });
 
 const textHeight = computed(() => {
-  if (!svg.value || !fontsLoaded.value) {
-    return 0;
-  }
-  return measureTextHeight(svg.value!, line.name, labelStyles.value);
+  return svgMeasurement.textHeight(line.name, labelStyles.value);
 });
 
 const height = computed(() => {
@@ -83,7 +74,7 @@ const r = computed(() => {
 });
 </script>
 <template>
-  <svg ref="svg" :viewBox="`0 0 ${width} ${height}`" v-bind="$attrs">
+  <svg :viewBox="`0 0 ${width} ${height}`" v-bind="$attrs">
     <rect :rx="r.x" :ry="r.y" :height :width :fill="line.color" />
     <text
       :x="width / 2"

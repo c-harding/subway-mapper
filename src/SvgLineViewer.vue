@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { computedAsync } from '@vueuse/core';
-import { computed, useTemplateRef } from 'vue';
+import { computed } from 'vue';
 import type { MapConfig } from './config';
 import { BoundedBox, Box, Padding, Spacing } from './geometry';
 import { layoutLine, type Direction, type Side, type StationPosition } from './layout-strategy';
 import type { Line, Network } from './model';
 import { getFontName } from './util/font';
 import { hyphenations } from './util/hyphenation';
-import { measureTextBBoxes } from './util/svg';
+import { useSvgMeasurement } from './util/svg';
 
 const { network, line, direction, initialSide, compact, maxWidth, maxHeight } = defineProps<{
   network: Network;
@@ -42,10 +41,6 @@ const mapConfig: MapConfig = {
 
 const fontFamily = computed(() => network.font && getFontName(network.font));
 
-const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), false);
-
-const svg = useTemplateRef<SVGSVGElement>('svg');
-
 function labelStyles(props?: {
   textAnchor?: 'start' | 'middle' | 'end';
   fontWeight?: number;
@@ -60,15 +55,16 @@ function labelStyles(props?: {
   } as const;
 }
 
+const svgMeasurement = useSvgMeasurement();
+
 const svgProps = computed(
   ():
     | { status: 'loading' }
     | { status: 'success'; positions: readonly StationPosition[]; bounds: Box }
     | { status: 'error'; error: unknown } => {
-    if (!svg.value || !fontsLoaded.value) {
+    if (!svgMeasurement.ready.value) {
       return { status: 'loading' };
     }
-    const svgElement = svg.value;
 
     try {
       const positions = layoutLine({
@@ -81,8 +77,7 @@ const svgProps = computed(
         compact,
         bounds: new BoundedBox({ maxWidth, maxHeight }),
         getLabelBoxes: (station, props) =>
-          measureTextBBoxes(
-            svgElement,
+          svgMeasurement.textBBoxes(
             hyphenations(station.name, network.hyphenation),
             mapConfig.label.lineHeight ?? mapConfig.label.fontSize,
             labelStyles({
@@ -120,7 +115,7 @@ const polylinePoints = computed(() =>
 );
 </script>
 <template>
-  <svg ref="svg" :viewBox>
+  <svg :viewBox>
     <template v-if="svgProps.status === 'success'">
       <g id="safeAreas" v-if="showSafeAreas">
         <template v-for="pos in svgProps.positions" :key="pos.station.name">

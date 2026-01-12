@@ -1,6 +1,9 @@
+import { computed, inject, type InjectionKey, type ShallowRef } from 'vue';
+import { fontsLoaded } from './font';
+
 const svgns = 'http://www.w3.org/2000/svg';
 
-export function measureTextBBox(svg: SVGSVGElement, text: string, styles: object) {
+function measureTextBBox(svg: SVGSVGElement, text: string, styles: object) {
   const data = document.createTextNode(text);
 
   const textElement = document.createElementNS(svgns, 'text');
@@ -57,7 +60,7 @@ function findBestWrapping(textLengths: TextLengthInfo[]): TextLengthInfo {
   return best[0]!;
 }
 
-export function measureTextBBoxes(
+function measureTextBBoxes(
   svg: SVGSVGElement,
   texts: string[],
   lineHeight: number,
@@ -104,7 +107,7 @@ export function measureTextBBoxes(
   }).sort((a, b) => a.lines.length - b.lines.length);
 }
 
-export function measureTextHeight(svg: SVGSVGElement, text: string, styles: object) {
+function measureTextHeight(svg: SVGSVGElement, text: string, styles: object) {
   const data = document.createTextNode(text);
 
   const textElement = document.createElementNS(svgns, 'text');
@@ -124,4 +127,27 @@ export function measureTextHeight(svg: SVGSVGElement, text: string, styles: obje
   svg.removeChild(textElement);
 
   return topAlignedBBox.y - bottomAlignedBBox.y;
+}
+
+export const svgElementInjectionKey = Symbol('svgElementInjectionKey') as InjectionKey<
+  Readonly<ShallowRef<SVGSVGElement | null>>
+>;
+
+export function useSvgMeasurement() {
+  const svg = inject(svgElementInjectionKey);
+  if (!svg) {
+    throw new Error(
+      'No SVG element provided for measurement. Make sure to provide svgElementInjectionKey.',
+    );
+  }
+  const ready = computed(() => svg.value !== null && fontsLoaded.value);
+  return {
+    ready,
+    textBBox: (text: string, styles: object) =>
+      ready.value ? measureTextBBox(svg.value!, text, styles) : null,
+    textBBoxes: (texts: string[], lineHeight: number, styles: object) =>
+      ready.value ? measureTextBBoxes(svg.value!, texts, lineHeight, styles) : [],
+    textHeight: (text: string, styles: object) =>
+      ready.value ? measureTextHeight(svg.value!, text, styles) : 0,
+  };
 }
