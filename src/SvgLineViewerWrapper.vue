@@ -1,26 +1,36 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch } from 'vue';
-import { type Direction, type Side } from './layout-strategy';
+import { computed, watchEffect } from 'vue';
+import { allDirections, allSides, type Direction } from './layout-strategy';
 import type { Network } from './model';
 import SvgLineNumber from './SvgLineNumber.vue';
 import SvgLineViewer from './SvgLineViewer.vue';
+import {
+  useBooleanSearchParam,
+  useEnumSearchParam,
+  useNumberSearchParam,
+  useStringSearchParam,
+} from './util/searchParam';
 
 const { network } = defineProps<{
   network: Network;
 }>();
 
-const chosenLine = shallowRef(network.lines[0]!);
-watch([() => network], ([newNetwork]) => {
-  if (!newNetwork.lines.includes(chosenLine.value)) {
-    chosenLine.value = newNetwork.lines[0]!;
+const lineId = useStringSearchParam('line', () => network.lines[0]!.name);
+
+watchEffect(() => {
+  if (!network.lines.find((line) => line.name === lineId.value)) {
+    lineId.value = network.lines[0]!.name;
   }
 });
 
-const initialSide = ref<Side>('left');
-const direction = ref<Direction>('s');
-const compact = ref(false);
-const maxWidth = ref<number | undefined>(undefined);
-const maxHeight = ref<number | undefined>(undefined);
+const chosenLine = computed(() => network.lines.find((line) => line.name === lineId.value)!);
+
+const initialSide = useEnumSearchParam('initialSide', allSides, 'left');
+const direction = useEnumSearchParam('direction', allDirections, 's');
+const compact = useBooleanSearchParam('compact', false);
+const maxWidth = useNumberSearchParam('maxWidth');
+const maxHeight = useNumberSearchParam('maxHeight');
+const showSafeAreas = useBooleanSearchParam('showSafeAreas', false);
 
 const directionArrow = computed(() => {
   return {
@@ -40,8 +50,6 @@ const directionGrid: (Direction | '.')[][] = [
   ['w', '.', 'e'],
   ['sw', 's', 'se'],
 ];
-
-const showSafeAreas = ref(false);
 </script>
 <template>
   <div :class="$style.controlRow">
@@ -86,8 +94,8 @@ const showSafeAreas = ref(false);
       <input
         name="chosen-line"
         type="radio"
-        :checked="chosenLine === line"
-        @change="chosenLine = line"
+        :checked="lineId === line.name"
+        @change="lineId = line.name"
       />
       <SvgLineNumber style="height: 1em" :network :line />
     </label>

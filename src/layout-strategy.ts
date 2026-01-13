@@ -12,19 +12,20 @@ const totalStationHeight = (mapConfig: MapConfig) =>
   Math.max(mapConfig.lineWidth, mapConfig.marker.radius * 2 + mapConfig.marker.strokeWidth * 2);
 
 export type Side = 'left' | 'right';
-const sides: readonly Side[] = ['left', 'right'];
+export const allSides: readonly Side[] = ['left', 'right'];
+
 export type Direction = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
-const directions: readonly Direction[] = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
+export const allDirections: readonly Direction[] = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
 
 function directionOffset(direction: Direction, side?: 'left' | 'right'): PointOffset {
-  const index = directions.indexOf(direction);
+  const index = allDirections.indexOf(direction);
   if (index === -1) {
     throw new Error(`Invalid direction: ${direction}`);
   }
   if (side === 'left') {
-    direction = directions[(index + 6) % 8]!;
+    direction = allDirections[(index + 6) % 8]!;
   } else if (side === 'right') {
-    direction = directions[(index + 2) % 8]!;
+    direction = allDirections[(index + 2) % 8]!;
   }
   return new PointOffset({
     dx: direction.includes('e') ? 1 : direction.includes('w') ? -1 : 0,
