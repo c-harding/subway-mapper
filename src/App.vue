@@ -7,9 +7,27 @@ import SvgLineViewerWrapper from './SvgLineViewerWrapper.vue';
 import { useNetworkFonts } from './util/font';
 import { svgElementInjectionKey } from './util/svg';
 
-const networkUrl = '/networks/mvg.json';
-const mapUrl = '/maps/mvg.json';
-const network = computedAsync(() => loadNetwork(networkUrl, mapUrl));
+const maps = Object.keys(
+  import.meta.glob('./*.json', {
+    base: '../public/maps/',
+  }),
+);
+const networks = Object.keys(
+  import.meta.glob('./*.json', {
+    base: '../public/networks/',
+  }),
+);
+
+if (networks.length === 0) {
+  throw new Error('No networks found in ./networks/');
+}
+if (maps.length === 0) {
+  throw new Error('No maps found in ./maps/');
+}
+
+const networkUrl = new URL('/networks/' + networks[0]!, document.baseURI);
+const mapUrl = new URL('/maps/' + maps[0]!, document.baseURI);
+const network = computedAsync(() => loadNetwork(networkUrl.toString(), mapUrl.toString()));
 
 useNetworkFonts(network);
 
@@ -29,15 +47,25 @@ const gitDate = import.meta.env.VITE_GIT_DATE && new Date(import.meta.env.VITE_G
   </main>
 
   <footer :class="$style.appFooter">
-    <div :class="$style.left">
+    <strong>Subway Mapper</strong>
+    <span :class="$style.left">
       <span v-if="network?.name">{{ network.name }}</span>
-    </div>
-    <span :class="$style.center">Subway Mapper</span>
-    <div :class="$style.right">
-      <span v-if="gitDate || gitHash">Version:</span>
-      <date v-if="gitDate" :datetime="gitDate.toISOString()">{{
+      {{ ' ' }}
+      <span :class="$style.inlineBlock"
+        >(<code>{{ networkUrl.pathname }}</code
+        >)</span
+      >
+      (Map:
+      <span :class="$style.inlineBlock"
+        ><code>{{ mapUrl.pathname }}</code
+        >)</span
+      >
+    </span>
+    <div :class="$style.right" v-if="gitDate || gitHash">
+      <span>Version:</span>
+      <time v-if="gitDate" :datetime="gitDate.toISOString()">{{
         gitDate.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-      }}</date>
+      }}</time>
       <span v-if="gitHash"
         >(<code>{{ gitHash }}</code
         >)</span
@@ -78,16 +106,27 @@ body {
 
   > * {
     flex: 1 0;
-  }
-
-  > span.center {
     text-align: center;
   }
 
-  > div.right {
+  .inlineBlock {
+    display: inline-block;
+  }
+
+  > div {
     display: flex;
-    justify-content: flex-end;
     gap: 0.5em;
+    justify-content: center;
+  }
+
+  > :first-child:not(:last-child) {
+    text-align: left;
+    justify-content: start;
+  }
+
+  > :last-child:not(:first-child) {
+    text-align: right;
+    justify-content: end;
   }
 }
 </style>

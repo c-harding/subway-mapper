@@ -2,9 +2,19 @@ import axios from 'axios';
 import { Network, NetworkDisplay } from './model';
 
 export async function loadNetwork(network: string, map?: string): Promise<Network> {
+  return parseNetwork(
+    axios.get(network).then((res) => res.data),
+    map !== undefined ? axios.get(map).then((res) => res.data) : undefined,
+  );
+}
+
+export async function parseNetwork(
+  network: Promise<unknown>,
+  map?: Promise<unknown>,
+): Promise<Network> {
   const [networkData, mapData] = await Promise.all([
-    axios.get(network).then((res) => Network.parse(res.data)),
-    map !== undefined ? axios.get(map).then((res) => NetworkDisplay.parse(res.data)) : undefined,
+    network.then((res) => Network.parse(res)),
+    map !== undefined ? map.then((res) => NetworkDisplay.parse(res)) : undefined,
   ]);
 
   return merge(networkData, mapData);
