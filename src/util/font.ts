@@ -1,17 +1,10 @@
-import { type OnCleanup, type WatchCallback } from '@vue/reactivity';
-import { computedAsync } from '@vueuse/core';
 import * as uuid from 'uuid';
-import {
-  isReactive,
-  isRef,
-  onUnmounted,
-  watch,
-  type MaybeRefOrGetter,
-  type WatchOptions,
-} from 'vue';
+import { readonly, ref, type MaybeRefOrGetter, type WatchEffect } from 'vue';
 import { FontReference, Network } from '../model';
+import { watchMaybeRefOrGetter } from './composable';
 
-export const fontsLoaded = computedAsync(() => document.fonts.ready.then(() => true), false);
+const fontsLoadedRef = ref(0);
+export const fontsLoaded = readonly(fontsLoadedRef);
 
 export function useNetworkFonts(network: MaybeRefOrGetter<Network | undefined>) {
   watchMaybeRefOrGetter(
@@ -23,21 +16,7 @@ export function useNetworkFonts(network: MaybeRefOrGetter<Network | undefined>) 
   );
 }
 
-function watchMaybeRefOrGetter<T, Immediate extends Readonly<boolean> = false>(
-  source: MaybeRefOrGetter<T>,
-  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
-  options?: WatchOptions<Immediate>,
-) {
-  if (isRef(source)) {
-    return watch(source, cb, options);
-  } else if (isReactive(source)) {
-    return watch(source as T & object, cb, options);
-  } else if (typeof source === 'function') {
-    return watch(source as () => T, cb, options);
-  } else if (options?.immediate) {
-    cb(source as T, undefined as never, onUnmounted);
-  }
-}
+type OnCleanup = Parameters<WatchEffect>[0];
 
 function getFont(font: FontReference, onCleanup: OnCleanup) {
   if (font.url.startsWith('google-fonts:')) {
@@ -93,4 +72,6 @@ function getNetworkFonts(network: Network, onCleanup: OnCleanup) {
   if (network.font) {
     getFont(network.font, onCleanup);
   }
+
+  document.fonts.addEventListener('loadingdone', () => fontsLoadedRef.value++, { once: true });
 }

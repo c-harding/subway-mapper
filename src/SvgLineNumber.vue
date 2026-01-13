@@ -32,13 +32,9 @@ const labelStyles = computed(
 
 const svgMeasurement = useSvgMeasurement();
 
-const textBBox = computed(() => {
-  return svgMeasurement.textBBox(line.name, labelStyles);
-});
+const textBBox = computed(() => svgMeasurement.textBBox(line.name, labelStyles.value));
 
-const textHeight = computed(() => {
-  return svgMeasurement.textHeight(line.name, labelStyles.value);
-});
+const textHeight = computed(() => svgMeasurement.textHeight(line.name, labelStyles.value));
 
 const height = computed(() => {
   if (!textBBox.value) {
