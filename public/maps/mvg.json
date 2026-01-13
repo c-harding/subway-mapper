@@ -1,5 +1,5 @@
 {
-    "$schema": "./schema.json",
+    "$schema": "../maps-schema.json",
     "font": "google-fonts:Asap:ital,wdth,wght@0,98,100..900",
     "lines": [
         {
