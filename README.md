@@ -13,10 +13,14 @@ A project for creating subway maps in SVG, implemented in Vue 3.
   - [ ] Determine the ideal height for the line number symbol based on the font size of the station label
 - [ ] Support optimal spacing of station labels, rather than as dense as possible
   - [ ] Algorithm:
-    - Determine spacing options for line (different layouts, different hyphenations), with weights based on hyphenation and number of side switches
-    - Take into account future layout curves: does the next line segment curve left or right?
-    - Determine minimum length
-  - [ ] Initially, allow the user to specify a target length for the line
+    - [ ] Determine spacing options for line (different layouts, different hyphenations), with weights based on hyphenation and number of side switches
+      - [x] Support hyphenation options per station label
+      - [ ] Prune options
+      - [ ] Allow wrapping even when not necessary for space reasons, to improve layout
+      - [ ] Favour layouts without hyphenation
+    - [x] Take into account future layout curves: does the next line segment curve left or right?
+    - [x] Determine minimum length
+  - [x] Initially, allow the user to specify a target length for the line
   - [ ] Later, optimize for overall map layout
 - [x] Support diagonals in line segments
 - [ ] Support different angles per line segment
@@ -26,6 +30,11 @@ A project for creating subway maps in SVG, implemented in Vue 3.
     - [ ] Move font information to layout file?
   - [ ] Consider how to perform two corners between segments
   - [ ] Consider how to add station labels at corners
+- [ ] Support parallel lines
+  - [ ] Consider how to represent in data model
+  - [ ] Consider how to layout parallel lines with different angles
+  - [ ] Station markers for parallel lines
+  - [ ] Corners with shared radius for parallel lines
 - [ ] Support branching lines
 - [ ] Support loops
 - [ ] Support line segments with custom properties
