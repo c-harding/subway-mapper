@@ -1,7 +1,7 @@
 import { useUrlSearchParams } from '@vueuse/core';
 import { computed, toRef, toValue, type MaybeRefOrGetter, type WritableComputedRef } from 'vue';
+import type { Nullable } from './composable';
 
-type Nullable<T> = T | null | undefined;
 
 function useUrlSearchParam(paramName: string) {
   return toRef(

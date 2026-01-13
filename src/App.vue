@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computedAsync } from '@vueuse/core';
+import { useAsyncState } from '@vueuse/core';
 import { provide, useTemplateRef } from 'vue';
+import AppFooter from './AppFooter.vue';
+import ErrorBox from './ErrorBox.vue';
+import LoadingSpinner from './LoadingSpinner.vue';
 import { loadNetwork } from './loadNetwork';
-import NetworkListView from './NetworkListView.vue';
-import SvgLineViewerWrapper from './SvgLineViewerWrapper.vue';
-import { useNetworkFonts } from './util/font';
+import NetworkRoot from './NetworkRoot.vue';
+import { delayRef } from './util/delayRef';
 import { svgElementInjectionKey } from './util/svg';
+
+provide(svgElementInjectionKey, useTemplateRef<SVGSVGElement>('svg'));
 
 const maps = Object.keys(
   import.meta.glob('./*.json', {
@@ -18,115 +22,66 @@ const networks = Object.keys(
   }),
 );
 
-if (networks.length === 0) {
-  throw new Error('No networks found in ./networks/');
-}
-if (maps.length === 0) {
-  throw new Error('No maps found in ./maps/');
-}
+const networkUrl = networks[0] ? new URL('/networks/' + networks[0], document.baseURI) : undefined;
+const mapUrl = maps[0] ? new URL('/maps/' + maps[0], document.baseURI) : undefined;
 
-const networkUrl = new URL('/networks/' + networks[0]!, document.baseURI);
-const mapUrl = new URL('/maps/' + maps[0]!, document.baseURI);
-const network = computedAsync(() => loadNetwork(networkUrl.toString(), mapUrl.toString()));
+const {
+  isLoading: loadingNetwork,
+  state: network,
+  error: networkLoadingError,
+  execute: reloadNetwork,
+} = useAsyncState(
+  async () => networkUrl && loadNetwork(networkUrl.toString(), mapUrl?.toString()),
+  undefined,
+  { immediate: true, shallow: true },
+);
 
-useNetworkFonts(network);
-
-provide(svgElementInjectionKey, useTemplateRef<SVGSVGElement>('svg'));
-
-const gitHash = import.meta.env.VITE_GIT_HASH;
-const gitDate = import.meta.env.VITE_GIT_DATE && new Date(import.meta.env.VITE_GIT_DATE);
+const showLoading = delayRef(loadingNetwork, (isLoading) => (isLoading ? 300 : 500));
 </script>
 
 <template>
   <!-- SVG element used for measuring text -->
   <svg ref="svg" height="0"></svg>
 
-  <main>
-    <SvgLineViewerWrapper v-if="network" :network :key="network.name" />
-    <NetworkListView v-if="network" :network />
-  </main>
+  <ErrorBox v-if="!networkUrl">
+    No networks were found on the server (in <code>./networks/</code>). Please add at least one
+    network JSON file to use Subway Mapper.
+  </ErrorBox>
+  <ErrorBox v-else-if="networkLoadingError">
+    The network <code>{{ networkUrl.pathname }}</code> could not be loaded, with error:
+    <template #pre>
+      <pre>{{
+        networkLoadingError instanceof Error
+          ? (networkLoadingError.message + '\n' + networkLoadingError.stack).trim()
+          : networkLoadingError
+      }}</pre>
+    </template>
+    <template #actions>
+      <button @click="() => reloadNetwork()">Try again</button>
+    </template>
+  </ErrorBox>
 
-  <footer :class="$style.appFooter">
-    <strong>Subway Mapper</strong>
-    <span :class="$style.left">
-      <span v-if="network?.name">{{ network.name }}</span>
-      {{ ' ' }}
-      <span :class="$style.inlineBlock"
-        >(<code>{{ networkUrl.pathname }}</code
-        >)</span
-      >
-      (Map:
-      <span :class="$style.inlineBlock"
-        ><code>{{ mapUrl.pathname }}</code
-        >)</span
-      >
-    </span>
-    <div :class="$style.right" v-if="gitDate || gitHash">
-      <span>Version:</span>
-      <time v-if="gitDate" :datetime="gitDate.toISOString()">{{
-        gitDate.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-      }}</time>
-      <span v-if="gitHash"
-        >(<code>{{ gitHash }}</code
-        >)</span
-      >
-    </div>
-  </footer>
+  <ErrorBox v-else-if="showLoading" color="#000">
+    Loading network <code>{{ networkUrl.pathname }}</code
+    >...
+    <template #icon><LoadingSpinner /></template>
+  </ErrorBox>
+
+  <NetworkRoot v-else-if="network" :network="network" :networkUrl :mapUrl />
+
+  <AppFooter :network :networkUrl :mapUrl />
 </template>
 
 <style module>
 :root {
   font-family: system-ui, sans-serif;
-  height: 100%;
+  min-height: 100vh;
 }
 
 body {
   margin: 0;
   display: flex;
   flex-direction: column;
-
-  > main {
-    padding: 1em;
-  }
-}
-
-.appFooter {
-  display: flex;
-  gap: 1em;
-  align-items: center;
-  font-size: 0.8em;
-  color: #666;
-  border-top: 1px solid #ccc;
-  padding: 0.5em;
-
-  position: sticky;
-  bottom: 0;
-  background: white;
-  margin-top: auto;
-
-  > * {
-    flex: 1 0;
-    text-align: center;
-  }
-
-  .inlineBlock {
-    display: inline-block;
-  }
-
-  > div {
-    display: flex;
-    gap: 0.5em;
-    justify-content: center;
-  }
-
-  > :first-child:not(:last-child) {
-    text-align: left;
-    justify-content: start;
-  }
-
-  > :last-child:not(:first-child) {
-    text-align: right;
-    justify-content: end;
-  }
+  min-height: 100vh;
 }
 </style>

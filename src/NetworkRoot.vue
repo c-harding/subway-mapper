@@ -1,0 +1,30 @@
+<script setup lang="ts">
+import { useTitle } from '@vueuse/core';
+import type { Network } from './model';
+import NetworkListView from './NetworkListView.vue';
+import SvgLineViewerWrapper from './SvgLineViewerWrapper.vue';
+import { useNetworkFonts } from './util/font';
+
+const { network } = defineProps<{
+  network: Network;
+  networkUrl: URL;
+  mapUrl?: URL;
+}>();
+
+useTitle(() => (network.name ? `${network.name} | Subway Mapper` : 'Subway Mapper'));
+
+useNetworkFonts(() => network);
+</script>
+
+<template>
+  <main :class="$style.networkRoot">
+    <SvgLineViewerWrapper v-if="network" :network :key="network.name" />
+    <NetworkListView v-if="network" :network />
+  </main>
+</template>
+
+<style module>
+.networkRoot {
+  padding: 1em;
+}
+</style>

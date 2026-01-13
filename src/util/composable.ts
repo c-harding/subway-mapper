@@ -8,6 +8,8 @@ import {
   watch,
 } from 'vue';
 
+export type Nullable<T> = T | null | undefined;
+
 export function watchMaybeRefOrGetter<T, Immediate extends Readonly<boolean> = false>(
   source: MaybeRefOrGetter<T>,
   cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
