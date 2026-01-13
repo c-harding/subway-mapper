@@ -26,6 +26,7 @@ watchEffect(() => {
 const chosenLine = computed(() => network.lines.find((line) => line.name === lineId.value)!);
 
 const initialSide = useEnumSearchParam('initialSide', allSides, 'left');
+const forceSide = useBooleanSearchParam('forceSide', false);
 const direction = useEnumSearchParam('direction', allDirections, 's');
 const compact = useBooleanSearchParam('compact', false);
 const maxWidth = useNumberSearchParam('maxWidth');
@@ -69,6 +70,10 @@ const directionGrid: (Direction | '.')[][] = [
       </tr>
     </table>
     <div :class="$style.controlColumn">
+      <label>
+        <input type="checkbox" v-model="forceSide" />
+        Force label side
+      </label>
       <label v-for="side in ['left', 'right'] as const" :key="side">
         <input
           type="radio"
@@ -77,15 +82,20 @@ const directionGrid: (Direction | '.')[][] = [
           :checked="initialSide === side"
           @change="initialSide = side"
         />
-        Labels on {{ side }}
+        {{ side }}
       </label>
     </div>
     <div :class="$style.controlColumn">
       <label> <input type="checkbox" v-model="compact" /> Compact display </label>
-    </div>
-    <div :class="$style.controlColumn">
-      <label>Max width <input type="number" v-model.number.lazy="maxWidth" /></label>
-      <label>Max height <input type="number" v-model.number.lazy="maxHeight" /></label>
+
+      <label>
+        Max width
+        <input type="number" v-model.number.lazy="maxWidth" size="6" min="0" />
+      </label>
+      <label>
+        Max height
+        <input type="number" v-model.number.lazy="maxHeight" size="6" min="0" />
+      </label>
     </div>
   </div>
 
@@ -99,9 +109,6 @@ const directionGrid: (Direction | '.')[][] = [
       />
       <SvgLineNumber style="height: 1em" :network :line />
     </label>
-  </p>
-
-  <p>
     <label><input type="checkbox" v-model="showSafeAreas" /> Show safe areas</label>
   </p>
 
@@ -111,6 +118,7 @@ const directionGrid: (Direction | '.')[][] = [
     :showSafeAreas
     :direction
     :initialSide
+    :forceSide
     :compact
     :maxWidth="maxWidth || undefined"
     :maxHeight="maxHeight || undefined"
@@ -119,9 +127,10 @@ const directionGrid: (Direction | '.')[][] = [
 
 <style module>
 p.lineSelection {
-  label {
-    font-weight: bold;
-  }
+  display: flex;
+  column-gap: 1ch;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .controlRow {

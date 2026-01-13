@@ -8,16 +8,18 @@ import { getFontName } from './util/font';
 import { hyphenations } from './util/hyphenation';
 import { useSvgMeasurement } from './util/svg';
 
-const { network, line, direction, initialSide, compact, maxWidth, maxHeight } = defineProps<{
-  network: Network;
-  line: Line;
-  showSafeAreas?: boolean;
-  direction: Direction;
-  initialSide: Side;
-  compact: boolean;
-  maxWidth?: number;
-  maxHeight?: number;
-}>();
+const { network, line, direction, initialSide, forceSide, compact, maxWidth, maxHeight } =
+  defineProps<{
+    network: Network;
+    line: Line;
+    showSafeAreas?: boolean;
+    direction: Direction;
+    initialSide: Side;
+    forceSide?: boolean;
+    compact?: boolean;
+    maxWidth?: number;
+    maxHeight?: number;
+  }>();
 
 const mapConfig: MapConfig = {
   padding: new Padding(10),
@@ -70,7 +72,7 @@ const svgProps = computed(
       const positions = layoutLine({
         stations: line.stations,
         initialSide,
-        side: initialSide,
+        side: forceSide ? initialSide : undefined,
         direction,
         mapConfig,
         debugDescription: line.name,
