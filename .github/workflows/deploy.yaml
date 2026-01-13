@@ -4,7 +4,8 @@ name: Deploy static content to Pages
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: '$default-branch'
+    branches:
+      - 'main'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -40,12 +41,19 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
         id: configure-pages
+      - name: Set short git commit SHA
+        id: vars
+        run: |
+          CALCULATED_SHA=$(git rev-parse --short ${{ github.sha }})
+          ISO_DATE=$(git show -s --format=%cI ${{ github.sha }})
+          echo "::set-output name=git_date::$ISO_DATE"
+          echo "::set-output name=short_sha::$CALCULATED_SHA"
       - name: Build
         run: yarn build
         env:
           VITE_BASE: ${{ steps.configure-pages.outputs.base_path }}
-          VITE_GIT_HASH: ${{ github.sha }}
-          VITE_GIT_DATE: ${{ github.event.head_commit.timestamp }}
+          VITE_GIT_HASH: ${{ steps.vars.outputs.short_sha  }}
+          VITE_GIT_DATE: ${{ steps.vars.outputs.git_date }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
