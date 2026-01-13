@@ -46,8 +46,8 @@ jobs:
         run: |
           CALCULATED_SHA=$(git rev-parse --short ${{ github.sha }})
           ISO_DATE=$(git show -s --format=%cI ${{ github.sha }})
-          echo "::set-output name=git_date::$ISO_DATE"
-          echo "::set-output name=short_sha::$CALCULATED_SHA"
+          echo "git_date=$ISO_DATE" >> $GITHUB_OUTPUT
+          echo "short_sha=$CALCULATED_SHA" >> $GITHUB_OUTPUT
       - name: Build
         run: yarn build
         env:
