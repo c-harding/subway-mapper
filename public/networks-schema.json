@@ -2,6 +2,7 @@
   "type": "object",
   "properties": {
     "font": {
+      "description": "Font for the network",
       "allOf": [
         {
           "$ref": "#/definitions/FontNameOrReference"
@@ -9,21 +10,26 @@
       ]
     },
     "lines": {
+      "minItems": 1,
       "type": "array",
       "items": {
         "$ref": "#/definitions/Line"
-      }
+      },
+      "description": "List of lines in the network"
     },
-    "lineTypes": {
+    "lineSymbols": {
+      "description": "Map of line types to their line symbols",
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/definitions/LineType"
+        "$ref": "#/definitions/LineSymbol"
       }
     },
     "name": {
+      "description": "Name of the network",
       "type": "string"
     },
     "hyphenation": {
+      "description": "List of hyphenated words, with ~ marking the hyphenation point",
       "type": "array",
       "items": {
         "type": "string"
@@ -68,10 +74,19 @@
       "id": "FontNameOrReference"
     },
     "Line": {
+      "description": "All the stations along a line",
+      "id": "Line",
       "type": "object",
       "properties": {
+        "id": {
+          "description": "The ID of the line. If not provided, the name is used instead.",
+          "type": "string",
+          "minLength": 1
+        },
         "name": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the line. This doubles as the unique identifier if id is not provided."
         },
         "color": {
           "type": "string"
@@ -113,13 +128,13 @@
       "required": [
         "name",
         "stations"
-      ],
-      "id": "Line"
+      ]
     },
-    "LineType": {
+    "LineSymbol": {
       "type": "object",
       "properties": {
         "shape": {
+          "description": "The shape of the line’s number symbol",
           "type": "string",
           "enum": [
             "oval",
@@ -128,12 +143,15 @@
           ]
         },
         "width": {
+          "description": "The width of the line’s number symbol",
           "type": "number"
         },
         "height": {
+          "description": "The height of the line’s number symbol",
           "type": "number"
         },
         "padding": {
+          "description": "Padding inside the line’s number symbol",
           "allOf": [
             {
               "$ref": "#/definitions/Padding"
@@ -141,6 +159,7 @@
           ]
         },
         "font": {
+          "description": "Font for the line’s number symbol",
           "allOf": [
             {
               "$ref": "#/definitions/FontNameOrReference"
@@ -154,10 +173,12 @@
           "type": "number"
         },
         "baseLineShift": {
+          "description": "Vertical shift (positive is down) for the line’s number in the symbol",
           "type": "number"
         }
       },
-      "id": "LineType"
+      "description": "Settings for a line’s number symbol",
+      "id": "LineSymbol"
     },
     "Padding": {
       "anyOf": [

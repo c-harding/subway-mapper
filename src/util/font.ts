@@ -85,9 +85,9 @@ export function getFontName(font: FontReference) {
 }
 
 function getNetworkFonts(network: Network, onCleanup: OnCleanup) {
-  for (const lineType of Object.values(network.lineTypes ?? {})) {
-    if (lineType.font) {
-      getFont(lineType.font, onCleanup);
+  for (const lineSymbol of Object.values(network.lineSymbols ?? {})) {
+    if (lineSymbol.font) {
+      getFont(lineSymbol.font, onCleanup);
     }
   }
   if (network.font) {

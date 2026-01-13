@@ -13,7 +13,7 @@
             "overlayColor": "#ffffff"
         }
     ],
-    "lineTypes": {
+    "lineSymbols": {
         "U-Bahn": {
             "shape": "rectangle",
             "width": 200,

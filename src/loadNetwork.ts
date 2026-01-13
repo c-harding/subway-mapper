@@ -10,6 +10,10 @@ export async function loadNetwork(network: string, map?: string): Promise<Networ
   return merge(networkData, mapData);
 }
 
+function skipUndefined<T extends Record<string, unknown>>(obj: T): T {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+}
+
 function merge(network: Network, mapData?: NetworkDisplay): Network {
   if (!mapData) return network;
 
@@ -17,15 +21,15 @@ function merge(network: Network, mapData?: NetworkDisplay): Network {
     ...network,
     font: mapData.font ?? network.font,
     lines: network.lines.map((line) => {
-      const mapLine = mapData.lines.find((l) => l.name === line.name);
+      const mapLine = mapData.lines?.find((l) => (l.id ? l.id === line.id : l.name === line.name));
       return {
         ...line,
-        ...mapLine,
+        ...skipUndefined(mapLine ?? {}),
       };
     }),
-    lineTypes: {
-      ...network.lineTypes,
-      ...mapData.lineTypes,
+    lineSymbols: {
+      ...network.lineSymbols,
+      ...mapData.lineSymbols,
     },
   };
 }

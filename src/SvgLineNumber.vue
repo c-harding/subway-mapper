@@ -10,7 +10,7 @@ const { network, line } = defineProps<{
 }>();
 
 const lineType = computed(() => {
-  return line.lineType ? (network.lineTypes?.[line.lineType] ?? {}) : {};
+  return line.lineType ? (network.lineSymbols?.[line.lineType] ?? {}) : {};
 });
 
 const font = computed(() => {

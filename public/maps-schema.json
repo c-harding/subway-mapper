@@ -2,6 +2,7 @@
   "type": "object",
   "properties": {
     "font": {
+      "description": "Font for the network",
       "allOf": [
         {
           "$ref": "#/definitions/FontNameOrReference"
@@ -9,21 +10,21 @@
       ]
     },
     "lines": {
+      "description": "Display settings for the lines in the network",
+      "minItems": 1,
       "type": "array",
       "items": {
         "$ref": "#/definitions/LineDisplay"
       }
     },
-    "lineTypes": {
+    "lineSymbols": {
+      "description": "Map of line types to their line symbols",
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/definitions/LineType"
+        "$ref": "#/definitions/LineSymbol"
       }
     }
   },
-  "required": [
-    "lines"
-  ],
   "id": "NetworkDisplay",
   "definitions": {
     "FontNameOrReference": {
@@ -61,8 +62,15 @@
     "LineDisplay": {
       "type": "object",
       "properties": {
+        "id": {
+          "description": "The ID of the line to apply these display settings to",
+          "type": "string",
+          "minLength": 1
+        },
         "name": {
-          "type": "string"
+          "description": "The name of the line to apply these display settings to. If an ID is also provided, this field overrides the user-visible name of the line.",
+          "type": "string",
+          "minLength": 1
         },
         "color": {
           "type": "string"
@@ -74,15 +82,43 @@
           "type": "string"
         }
       },
-      "required": [
-        "name"
-      ],
-      "id": "LineDisplay"
+      "id": "LineDisplay",
+      "allOf": [
+        {
+          "$ref": "#/definitions/RawLineDisplay"
+        }
+      ]
     },
-    "LineType": {
+    "RawLineDisplay": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The ID of the line to apply these display settings to",
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "description": "The name of the line to apply these display settings to. If an ID is also provided, this field overrides the user-visible name of the line.",
+          "type": "string",
+          "minLength": 1
+        },
+        "color": {
+          "type": "string"
+        },
+        "overlayColor": {
+          "type": "string"
+        },
+        "lineType": {
+          "type": "string"
+        }
+      },
+      "id": "RawLineDisplay"
+    },
+    "LineSymbol": {
       "type": "object",
       "properties": {
         "shape": {
+          "description": "The shape of the line’s number symbol",
           "type": "string",
           "enum": [
             "oval",
@@ -91,12 +127,15 @@
           ]
         },
         "width": {
+          "description": "The width of the line’s number symbol",
           "type": "number"
         },
         "height": {
+          "description": "The height of the line’s number symbol",
           "type": "number"
         },
         "padding": {
+          "description": "Padding inside the line’s number symbol",
           "allOf": [
             {
               "$ref": "#/definitions/Padding"
@@ -104,6 +143,7 @@
           ]
         },
         "font": {
+          "description": "Font for the line’s number symbol",
           "allOf": [
             {
               "$ref": "#/definitions/FontNameOrReference"
@@ -117,10 +157,12 @@
           "type": "number"
         },
         "baseLineShift": {
+          "description": "Vertical shift (positive is down) for the line’s number in the symbol",
           "type": "number"
         }
       },
-      "id": "LineType"
+      "description": "Settings for a line’s number symbol",
+      "id": "LineSymbol"
     },
     "Padding": {
       "anyOf": [
