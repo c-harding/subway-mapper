@@ -1,4 +1,5 @@
 {
+  "id": "Network",
   "type": "object",
   "properties": {
     "font": {
@@ -39,7 +40,6 @@
   "required": [
     "lines"
   ],
-  "id": "Network",
   "definitions": {
     "FontNameOrReference": {
       "anyOf": [

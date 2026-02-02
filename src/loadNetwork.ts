@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Network, NetworkDisplay } from './model';
+import { definedFilter } from './util/undefined';
 
 export async function loadNetwork(network: string, map?: string): Promise<Network> {
   return parseNetwork(
@@ -20,23 +21,21 @@ export async function parseNetwork(
   return merge(networkData, mapData);
 }
 
-function skipUndefined<T extends Record<string, unknown>>(obj: T): T {
-  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
-}
-
 function merge(network: Network, mapData?: NetworkDisplay): Network {
   if (!mapData) return network;
 
   return {
     ...network,
     font: mapData.font ?? network.font,
-    lines: network.lines.map((line) => {
-      const mapLine = mapData.lines?.find((l) => (l.id ? l.id === line.id : l.name === line.name));
-      return {
-        ...line,
-        ...skipUndefined(mapLine ?? {}),
-      };
-    }),
+    lines: network.lines
+      .map((line) => {
+        const mapLine = mapData.lines?.find((l) =>
+          l.id ? l.id === line.id : l.name === line.name,
+        );
+        return mapLine ? line.override(mapLine) : line;
+      })
+      .filter(definedFilter),
+
     lineSymbols: {
       ...network.lineSymbols,
       ...mapData.lineSymbols,

@@ -1,6 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as z from 'zod';
-import { Network, NetworkDisplay } from '../src/model.ts';
+import { Network, NetworkDisplay } from '../src/model/index.ts';
 
 await fs.writeFile(
   'public/networks-schema.json',
