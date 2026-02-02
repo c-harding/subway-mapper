@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue';
-import { allDirections, allSides, type Direction } from './layout-strategy';
+
 import type { Network } from './model';
+import { allDirections, allSides, type Direction } from './model/direction';
 import SvgLineNumber from './SvgLineNumber.vue';
 import SvgLineViewer from './SvgLineViewer.vue';
 import {

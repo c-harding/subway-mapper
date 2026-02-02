@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { MapConfig } from './config';
-import { BoundedBox, Box, Padding, Spacing } from './geometry';
-import { layoutLine, type Direction, type Side, type StationPosition } from './layout-strategy';
+import { BoundedBox, Box, Padding, Point, Spacing } from './geometry';
+import {
+  directionOffset,
+  layoutLine,
+  offsetStationPosition,
+  type StationPosition,
+} from './layout-strategy';
 import type { Line, Network } from './model';
+import { allDirections, type Direction, type Side } from './model/direction';
+import type { DirectionSegment } from './model/line';
 import { getFontName } from './util/font';
 import { hyphenations } from './util/hyphenation';
 import { useSvgMeasurement } from './util/svg';
@@ -31,6 +38,7 @@ const mapConfig: MapConfig = {
     markerLabel: new Spacing(2),
   },
   lineWidth: 10,
+  curve: { radius: 50 },
   marker: {
     radius: 6,
     strokeWidth: 3,
@@ -40,6 +48,59 @@ const mapConfig: MapConfig = {
     fontWeight: 600,
   },
 };
+
+function makeCurve(prevDirection: Direction, prevPoint: Point, to: LineSegmentDetails) {
+  const nextDirection = to.direction;
+
+  const relativeDirectionIndex =
+    (allDirections.indexOf(nextDirection) - allDirections.indexOf(prevDirection) + 8) % 8;
+
+  if (relativeDirectionIndex === 0) {
+    return {
+      center: prevPoint,
+      radius: 0,
+      offset: to.entrance.offsetTo(prevPoint),
+      bounds: prevPoint.withSize({ width: 0, height: 0 }),
+      path: '',
+    };
+  }
+
+  const clockwise = relativeDirectionIndex < 4;
+
+  const directionOffsetPrev = directionOffset(prevDirection);
+  const directionOffsetNext = directionOffset(nextDirection);
+  if (relativeDirectionIndex === 4) {
+    throw new Error('U-turns are not supported: ' + prevDirection + ' to ' + nextDirection);
+  }
+
+  let radius: number;
+  if ('radius' in mapConfig.curve) {
+    radius = mapConfig.curve.radius;
+  } else {
+    radius = Math.abs(
+      mapConfig.curve.curvature * Math.tan(Math.PI / 2 - relativeDirectionIndex * (Math.PI / 8)),
+    );
+  }
+  const center = prevPoint.offset(
+    directionOffsetPrev.perpendicular(clockwise).unit().scale(radius),
+  );
+  const curveExit = center.offset(
+    directionOffsetNext.perpendicular(!clockwise).unit().scale(radius),
+  );
+
+  const sweepFlag = clockwise ? 1 : 0;
+
+  return {
+    center,
+    radius,
+    offset: to.entrance.offsetTo(curveExit),
+    bounds: center.withSize({
+      width: radius * 2,
+      height: radius * 2,
+    }),
+    path: `L ${prevPoint.x} ${prevPoint.y} A ${radius} ${radius} 0 0 ${sweepFlag} ${curveExit.x} ${curveExit.y}`,
+  };
+}
 
 const fontFamily = computed(() => network.font && getFontName(network.font));
 
@@ -59,40 +120,138 @@ function labelStyles(props?: {
 
 const svgMeasurement = useSvgMeasurement();
 
+function joiningPoint(terminus: Point, bounds: Box, direction: Direction, factorSign = -1): Point {
+  const newBox = terminus.withSize({ width: 0, height: 0 });
+  const offset = directionOffset(direction).scale(factorSign);
+  const factor = Box.separationFactor([bounds], [newBox], offset);
+  return terminus.offset(offset.scale(factor));
+}
+
+interface LineSegmentDetails {
+  positions: readonly StationPosition[];
+  bounds: Box;
+  entrance: Point;
+  exit: Point;
+  direction: Direction;
+}
+
+function layoutLineSegment(segment: DirectionSegment): LineSegmentDetails {
+  const resolvedDirection = segment.direction ?? direction;
+
+  if (segment.stations.length === 0) {
+    const point = new Point(0, 0);
+    return {
+      positions: [],
+      bounds: Box.bounds(point),
+      entrance: point,
+      exit: point,
+      direction: resolvedDirection,
+    };
+  }
+
+  const positions = layoutLine({
+    stations: segment.stations,
+    initialSide,
+    side: forceSide ? initialSide : undefined,
+    direction: resolvedDirection,
+    mapConfig,
+    debugDescription: line.name,
+    compact,
+    bounds: new BoundedBox({ maxWidth, maxHeight }),
+    getLabelBoxes: (station, props) =>
+      svgMeasurement.textBBoxes(
+        hyphenations(station.name, network.hyphenation),
+        mapConfig.label.lineHeight ?? mapConfig.label.fontSize,
+        labelStyles({
+          textAnchor: props?.textAnchor,
+          fontWeight: station.terminus ? 700 : undefined,
+          dominantBaseline: props?.dominantBaseline,
+        }),
+      ),
+  });
+
+  const bounds = Box.bounds(...positions.flatMap((pos) => [pos.marker, pos.label]));
+  const safeAreaBounds = Box.bounds(...positions.flatMap((pos) => pos.safeAreas));
+
+  const entrance = joiningPoint(positions[0]!.marker, safeAreaBounds, resolvedDirection, -1);
+  const exit = joiningPoint(
+    positions[positions.length - 1]!.marker,
+    safeAreaBounds,
+    resolvedDirection,
+    1,
+  );
+
+  return { positions, bounds, entrance, exit, direction: resolvedDirection };
+}
+
+interface StationPositionWithCurve extends StationPosition {
+  curveBefore?: string;
+}
+
 const svgProps = computed(
   ():
     | { status: 'loading' }
-    | { status: 'success'; positions: readonly StationPosition[]; bounds: Box }
+    | { status: 'success'; positions: readonly StationPositionWithCurve[]; bounds: Box }
+    | { status: 'empty' }
     | { status: 'error'; error: unknown } => {
     if (!svgMeasurement.ready.value) {
       return { status: 'loading' };
     }
 
+    if (line.stations.length === 0) {
+      return { status: 'empty' };
+    }
+
     try {
-      const positions = layoutLine({
-        stations: line.stations,
-        initialSide,
-        side: forceSide ? initialSide : undefined,
-        direction,
-        mapConfig,
-        debugDescription: line.name,
-        compact,
-        bounds: new BoundedBox({ maxWidth, maxHeight }),
-        getLabelBoxes: (station, props) =>
-          svgMeasurement.textBBoxes(
-            hyphenations(station.name, network.hyphenation),
-            mapConfig.label.lineHeight ?? mapConfig.label.fontSize,
-            labelStyles({
-              textAnchor: props?.textAnchor,
-              fontWeight: station.terminus ? 700 : undefined,
-              dominantBaseline: props?.dominantBaseline,
-            }),
-          ),
-      });
+      const laidOutSegments = line.directionSegments
+        .map((segment) => layoutLineSegment(segment))
+        .reduce<
+          | {
+              positions: readonly StationPositionWithCurve[];
+              prevDirection: Direction;
+              prevPoint: Point;
+              carriedCurve: string | undefined;
+              bounds: Box;
+            }
+          | undefined
+        >((acc, segment) => {
+          if (!acc) {
+            if (segment.positions.length === 0) {
+              throw new Error('First segment has no stations');
+            }
+            return {
+              positions: segment.positions,
+              prevDirection: segment.direction,
+              prevPoint: segment.exit,
+              carriedCurve: undefined,
+              bounds: segment.bounds,
+            };
+          }
+          const curve = makeCurve(acc.prevDirection, acc.prevPoint, segment);
+          const adjustedPositions = segment.positions.map<StationPositionWithCurve>((pos) =>
+            offsetStationPosition(pos, curve.offset),
+          );
+          let carriedCurve: string | undefined;
+          if (adjustedPositions.length > 0) {
+            adjustedPositions[0]!.curveBefore = (acc.carriedCurve ?? '') + curve.path;
+          } else {
+            // No stations in this segment; carry the curve forward to the next segment.
+            carriedCurve = (acc.carriedCurve ?? '') + curve.path;
+          }
+          return {
+            positions: [...acc.positions, ...adjustedPositions],
+            prevDirection: segment.direction,
+            prevPoint: segment.exit.offset(curve.offset),
+            carriedCurve,
+            bounds: Box.bounds(acc.bounds, segment.bounds.offset(curve.offset), curve.bounds),
+          };
+        }, undefined)!;
 
-      const bounds = Box.bounds(...positions.flatMap((pos) => [pos.marker, pos.label]));
-
-      return { status: 'success', positions, bounds };
+      return {
+        status: 'success',
+        positions: laidOutSegments.positions,
+        bounds: laidOutSegments.bounds,
+      };
     } catch (error) {
       console.error(`Error laying out line ${line.name}:`, error);
       return { status: 'error', error };
@@ -110,9 +269,11 @@ const viewBox = computed(() => {
   return `${padded.min.x} ${padded.min.y} ${padded.width} ${padded.height}`;
 });
 
-const polylinePoints = computed(() =>
+const path = computed(() =>
   svgProps.value.status === 'success'
-    ? svgProps.value.positions.map((pos) => `${pos.marker.x},${pos.marker.y}`).join(' ')
+    ? svgProps.value.positions
+        .map((pos, i) => `${pos.curveBefore ?? ''}${i ? 'L' : 'M'}${pos.marker.x},${pos.marker.y}`)
+        .join('')
     : undefined,
 );
 </script>
@@ -134,8 +295,8 @@ const polylinePoints = computed(() =>
         </template>
       </g>
       <g id="lines-background">
-        <polyline
-          :points="polylinePoints"
+        <path
+          :d="path"
           stroke="white"
           :stroke-width="mapConfig.lineWidth + mapConfig.marker.strokeWidth * 2"
           stroke-linecap="butt"
@@ -153,8 +314,8 @@ const polylinePoints = computed(() =>
         />
       </g>
       <g id="lines">
-        <polyline
-          :points="polylinePoints"
+        <path
+          :d="path"
           :stroke="line.color"
           :stroke-width="mapConfig.lineWidth"
           stroke-linecap="round"
@@ -209,4 +370,5 @@ const polylinePoints = computed(() =>
   </svg>
   <pre v-if="svgProps.status === 'error'">Error: {{ svgProps.error }}</pre>
   <p v-if="svgProps.status === 'loading'">Loading...</p>
+  <p v-if="svgProps.status === 'empty'">No stations on this line.</p>
 </template>

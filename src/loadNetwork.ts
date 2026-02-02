@@ -18,7 +18,9 @@ export async function parseNetwork(
     map !== undefined ? map.then((res) => NetworkDisplay.parse(res)) : undefined,
   ]);
 
-  return merge(networkData, mapData);
+  const mergedMap = merge(networkData, mapData);
+  console.log({ mergedMap });
+  return mergedMap;
 }
 
 function merge(network: Network, mapData?: NetworkDisplay): Network {

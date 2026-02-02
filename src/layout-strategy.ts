@@ -3,6 +3,7 @@ import { BoundedBox, Box, Point, PointOffset, type RangedPoint } from './geometr
 import type { BoxInput } from './geometry/Point';
 
 import type { Station } from './model';
+import { allDirections, type Direction, type Side } from './model/direction';
 import { range } from './util/range';
 import type { TextBox } from './util/svg';
 
@@ -11,13 +12,7 @@ const totalStationWidth = (mapConfig: MapConfig) =>
 const totalStationHeight = (mapConfig: MapConfig) =>
   Math.max(mapConfig.lineWidth, mapConfig.marker.radius * 2 + mapConfig.marker.strokeWidth * 2);
 
-export type Side = 'left' | 'right';
-export const allSides: readonly Side[] = ['left', 'right'];
-
-export type Direction = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
-export const allDirections: readonly Direction[] = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
-
-function directionOffset(direction: Direction, side?: 'left' | 'right'): PointOffset {
+export function directionOffset(direction: Direction, side?: 'left' | 'right'): PointOffset {
   const index = allDirections.indexOf(direction);
   if (index === -1) {
     throw new Error(`Invalid direction: ${direction}`);
@@ -54,7 +49,10 @@ export interface StationPositionWithOffset extends StationPosition {
   offset: number;
 }
 
-function offsetStationPosition(position: StationPosition, offset: PointOffset): StationPosition {
+export function offsetStationPosition(
+  position: StationPosition,
+  offset: PointOffset,
+): StationPosition {
   return {
     ...position,
     marker: position.marker.offset(offset),
@@ -175,9 +173,9 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
           side,
           // The score is calculated as the number of lines, plus a small penalty for not being on a consistent side.
           score: {
-            [side]: labelBox.lines.length,
-            none: labelBox.lines.length,
-            default: labelBox.lines.length + 1,
+            [side]: 1 - labelBox.lines.length,
+            none: 1 - labelBox.lines.length,
+            default: 1 - labelBox.lines.length + 1,
           },
           safeAreas: [
             marker.withPadding({
@@ -272,7 +270,7 @@ function getPositions(props: GetPositionsProps) {
 }
 
 interface LayoutLineProps extends Omit<GetPositionsProps, 'station'> {
-  stations: Station[];
+  stations: readonly Station[];
   compact?: boolean;
   initialSide: Side;
   debugDescription: string;

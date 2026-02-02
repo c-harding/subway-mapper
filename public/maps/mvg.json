@@ -5,12 +5,76 @@
         {
             "name": "U3",
             "color": "#ec6725",
-            "overlayColor": "#ffffff"
+            "overlayColor": "#ffffff",
+            "directions": [
+                {
+                    "start": "Moosach",
+                    "end": "Petuelring",
+                    "direction": "e"
+                },
+                {
+                    "start": "Scheidplatz",
+                    "end": "Scheidplatz",
+                    "direction": "s"
+                },
+                {
+                    "start": "Bonner Platz",
+                    "end": "Bonner Platz",
+                    "direction": "e"
+                },
+                {
+                    "start": "Münchner Freiheit",
+                    "end": "Marienplatz",
+                    "direction": "s"
+                },
+                {
+                    "start": "Sendlinger Tor",
+                    "end": "Implerstraße",
+                    "direction": "sw"
+                },
+                {
+                    "start": "Brudermühlstraße",
+                    "end": "Thalkirchen (Tierpark)",
+                    "direction": "s"
+                },
+                {
+                    "start": "Obersendling",
+                    "end": "Fürstenried West",
+                    "direction": "w"
+                }
+            ]
         },
         {
             "name": "U6",
             "color": "#0065ae",
-            "overlayColor": "#ffffff"
+            "overlayColor": "#ffffff",
+            "directions": [
+                {
+                    "start": "Garching-Forschungszentrum",
+                    "end": "Studentenstadt",
+                    "direction": "s"
+                },
+                {
+                    "start": "Alte Heide",
+                    "end": "Dietlindenstraße",
+                    "direction": "sw"
+                },
+                {
+                    "start": "Münchner Freiheit",
+                    "end": "Marienplatz",
+                    "direction": "s"
+                },
+                {
+                    "start": "Sendlinger Tor",
+                    "end": "Implerstraße",
+                    "direction": "sw"
+                },
+                {
+                    "start": "Harras",
+                    "end": "Klinikum Großhadern",
+                    "direction": "w"
+                }
+            ]
         }
     ],
     "lineSymbols": {

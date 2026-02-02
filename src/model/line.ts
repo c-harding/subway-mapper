@@ -1,5 +1,23 @@
+import { skipUndefined } from '@/util/undefined.ts';
 import * as z from 'zod';
+import { allDirections, type Direction } from './direction.ts';
 import { RawStation, type Station } from './station.ts'; // This file is used by Node, so must use .ts extension
+
+export const DirectionSpec = z.object({
+  /** The name of the first station in the segment */
+  start: z.string().optional().describe('The name of the first station in the segment'),
+  /** The name of the last station in the segment */
+  end: z.string().optional().describe('The name of the last station in the segment'),
+  /** The direction of the line segment */
+  direction: z.enum(allDirections).describe('The direction of the line segment'),
+});
+
+export type DirectionSpec = z.infer<typeof DirectionSpec>;
+
+export interface DirectionSegment {
+  direction: Direction | undefined;
+  stations: Station[];
+}
 
 const RawLineDisplay = z
   .object({
@@ -27,6 +45,9 @@ const RawLineDisplay = z
 
     /** The type of the line, used to select line symbols */
     lineType: z.string().optional(),
+
+    /** The directions of the segments of the line */
+    directions: z.array(DirectionSpec).optional(),
   })
   .meta({ id: 'RawLineDisplay' });
 
@@ -70,6 +91,9 @@ class LineImpl {
   readonly overlayColor?: string;
   readonly lineType?: string;
 
+  readonly directions?: DirectionSpec[];
+  readonly directionSegments: readonly DirectionSegment[];
+
   constructor(rawLine: z.infer<typeof RawLine>) {
     this.id = rawLine.id ?? rawLine.name;
     this.name = rawLine.name;
@@ -79,16 +103,22 @@ class LineImpl {
     this.color = rawLine.color;
     this.overlayColor = rawLine.overlayColor;
     this.lineType = rawLine.lineType;
+
+    this.directions = rawLine.directions;
+
+    this.directionSegments = LineImpl.splitIntoDirectionSegments(
+      this.stations,
+      this.directions ?? [],
+      this.id,
+    );
   }
 
   override(data: z.infer<typeof RawLineDisplay>): LineImpl {
     return new LineImpl({
-      id: this.id,
-      name: data.name ?? this.name,
+      ...this,
+      ...skipUndefined(data),
       stations: this.stations,
-      color: data.color ?? this.color,
-      overlayColor: data.overlayColor ?? this.overlayColor,
-      lineType: data.lineType ?? this.lineType,
+      id: this.id,
     });
   }
 
@@ -107,6 +137,73 @@ class LineImpl {
         (station) => station !== undefined,
       ),
     );
+  }
+
+  static splitIntoDirectionSegments(
+    stations: readonly Station[],
+    directionSpecs: readonly DirectionSpec[],
+    id: string,
+  ) {
+    // The accumulated completed segments. Empty until a segment is completed.
+    const segments: DirectionSegment[] = [];
+    // The current segment being built, and its spec. Undefined after a segment is completed.
+    let current: { segment: Station[]; spec: DirectionSpec | undefined } | undefined = undefined;
+    let nextSpecIndex = 0;
+    for (const station of stations) {
+      // If we are not in a segment, start a new one.
+      if (!current) {
+        // Handle any intermediate segments that have no start or end (i.e., segment without any stations).
+        let nextSpec = directionSpecs[nextSpecIndex];
+        while (
+          nextSpecIndex > 0 &&
+          nextSpecIndex < directionSpecs.length - 1 &&
+          nextSpec?.start === undefined &&
+          nextSpec?.end === undefined
+        ) {
+          segments.push({ direction: nextSpec!.direction, stations: [] });
+          nextSpecIndex++;
+          nextSpec = directionSpecs[nextSpecIndex];
+        }
+
+        // If the spec matches this station, use it.
+        if (nextSpec && (nextSpec.start === undefined || nextSpec.start === station.name)) {
+          current = { segment: [station], spec: nextSpec };
+          nextSpecIndex++;
+        } else {
+          current = { segment: [station], spec: undefined };
+        }
+      } else {
+        // If the current segment has no spec, check if the next spec starts here.
+        const nextSpecStart = directionSpecs[nextSpecIndex]?.start;
+        if (!current.spec && nextSpecStart === station.name) {
+          // If we are in a segment without a spec, but the next spec starts here, complete the current segment and start a new one.
+          segments.push({ direction: undefined, stations: current.segment });
+          current = { segment: [station], spec: directionSpecs[nextSpecIndex] };
+          nextSpecIndex++;
+        } else {
+          // Otherwise, just add the station to the current segment.
+          current.segment.push(station);
+        }
+      }
+
+      // If the current spec ends at this station, complete the segment.
+      if (current.spec && current.spec.end === station.name) {
+        segments.push({ direction: current.spec.direction, stations: current.segment });
+        current = undefined;
+      }
+    }
+    if (current) {
+      segments.push({ direction: current.spec?.direction, stations: current.segment });
+    }
+
+    if (nextSpecIndex < directionSpecs.length) {
+      console.warn(
+        `Warning: Not all direction specs were used for line ${id}.`,
+        directionSpecs[nextSpecIndex],
+        'was never reached.',
+      );
+    }
+    return segments;
   }
 }
 

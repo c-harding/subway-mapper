@@ -77,6 +77,10 @@ export class Point {
   toBox(): Box {
     return new Box(this, this);
   }
+
+  offsetTo(other: Point): PointOffset {
+    return new PointOffset(other.x - this.x, other.y - this.y);
+  }
 }
 
 export interface BoxInput {

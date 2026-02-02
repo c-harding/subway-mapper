@@ -19,6 +19,14 @@ export class PointOffset implements PointOffsetLike {
     }
   }
 
+  unit(): PointOffset {
+    const length = Math.hypot(this.dx, this.dy);
+    if (length === 0) {
+      return new PointOffset(0, 0);
+    }
+    return new PointOffset(this.dx / length, this.dy / length);
+  }
+
   scale(factor: number): PointOffset {
     return new PointOffset(this.dx * factor, this.dy * factor);
   }
@@ -28,5 +36,13 @@ export class PointOffset implements PointOffsetLike {
     const crossProduct = this.dx * (other.dy ?? 0) - this.dy * (other.dx ?? 0);
     const dotProduct = this.dx * (other.dx ?? 0) + this.dy * (other.dy ?? 0);
     return crossProduct === 0 && dotProduct > 0;
+  }
+
+  perpendicular(clockwise: boolean): PointOffset {
+    if (clockwise) {
+      return new PointOffset(-this.dy, this.dx);
+    } else {
+      return new PointOffset(this.dy, -this.dx);
+    }
   }
 }

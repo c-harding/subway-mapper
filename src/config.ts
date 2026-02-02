@@ -10,6 +10,7 @@ export interface MapConfig {
     markerLabel: Spacing;
   };
   lineWidth: number;
+  curve: { radius: number } | { curvature: number };
   marker: {
     radius: number;
     strokeWidth: number;

@@ -86,8 +86,6 @@ export const Network = NetworkDisplay.extend({
       }),
     );
 
-    console.log({ stationData });
-
     return {
       ...network,
       stations: stationData,

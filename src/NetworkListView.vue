@@ -19,8 +19,8 @@ const fontFamily = computed(() => network.font && getFontName(network.font));
     :key="i"
   >
     <h2 :style="{ color: line.color }">{{ line.name }}</h2>
-    <ul>
-      <li v-for="station in line.stations" :key="station.name">
+    <ul v-for="(segment, i) in line.directionSegments" :key="i">
+      <li v-for="station in segment.stations" :key="station.name">
         {{ station.name }}
         <span
           v-for="alternative in hyphenationAlternatives(station.name, network.hyphenation)"
