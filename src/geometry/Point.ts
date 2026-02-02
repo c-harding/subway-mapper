@@ -53,10 +53,17 @@ export class Point {
       minY: box.min.y,
       maxX: box.max.x,
       maxY: box.max.y,
+      label: box.label,
     });
   }
 
-  withSizeFromBox(box: { x: number; y: number; width: number; height: number }): RangedPoint {
+  withSizeFromBox(box: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    label?: string;
+  }): RangedPoint {
     return new RangedPoint({
       x: this.x,
       y: this.y,
@@ -64,6 +71,7 @@ export class Point {
       minY: this.y + box.y,
       maxX: this.x + box.x + box.width,
       maxY: this.y + box.y + box.height,
+      label: box.label,
     });
   }
 
@@ -94,17 +102,23 @@ export class Box {
   readonly min: Point;
   readonly max: Point;
 
-  constructor(min: Point, max: Point);
-  constructor(values: { minX: number; minY: number; maxX: number; maxY: number });
+  readonly label: string | undefined;
+
+  constructor(min: Point, max: Point, label?: string);
+  constructor(values: { minX: number; minY: number; maxX: number; maxY: number; label?: string });
   constructor(
-    ...args: [Point, Point] | [{ minX: number; minY: number; maxX: number; maxY: number }]
+    ...args:
+      | [Point, Point, string?]
+      | [{ minX: number; minY: number; maxX: number; maxY: number; label?: string }]
   ) {
     if (args.length === 1) {
       this.min = new Point({ x: args[0].minX, y: args[0].minY });
       this.max = new Point({ x: args[0].maxX, y: args[0].maxY });
+      this.label = args[0].label;
     } else {
       this.min = args[0];
       this.max = args[1];
+      this.label = args[2];
     }
   }
 
@@ -124,15 +138,16 @@ export class Box {
   offset(props: PointOffsetLike): Box;
   offset(...args: [number, number] | [PointOffsetLike]): Box {
     const [dx, dy] = args.length === 1 ? [args[0].dx ?? 0, args[0].dy ?? 0] : args;
-    return new Box(this.min.offset(dx, dy), this.max.offset(dx, dy));
+    return new Box(this.min.offset(dx, dy), this.max.offset(dx, dy), this.label);
   }
 
-  with(props: { minX?: number; minY?: number; maxX?: number; maxY?: number }): Box {
+  with(props: { minX?: number; minY?: number; maxX?: number; maxY?: number; label?: string }): Box {
     return new Box({
       minX: props.minX ?? this.min.x,
       minY: props.minY ?? this.min.y,
       maxX: props.maxX ?? this.max.x,
       maxY: props.maxY ?? this.max.y,
+      label: props.label ?? this.label,
     });
   }
 
@@ -153,7 +168,7 @@ export class Box {
       maxX = Math.max(maxX, box.max.x);
       maxY = Math.max(maxY, box.max.y);
     }
-    return new Box({ minX, minY, maxX, maxY });
+    return new Box({ minX, minY, maxX, maxY, label: undefined });
   }
 
   withPadding(paddingLike: PaddingLike): Box {
@@ -163,6 +178,7 @@ export class Box {
       minY: this.min.y - padding.top,
       maxX: this.max.x + padding.right,
       maxY: this.max.y + padding.bottom,
+      label: this.label,
     });
   }
 
@@ -253,6 +269,10 @@ class RangedPoint extends Point implements Box {
     return this.box.max;
   }
 
+  get label(): string | undefined {
+    return this.box.label;
+  }
+
   constructor(values: {
     x: number;
     y: number;
@@ -260,6 +280,7 @@ class RangedPoint extends Point implements Box {
     minY: number;
     maxX: number;
     maxY: number;
+    label?: string;
   }) {
     super(values.x, values.y);
     this.box = new Box({
@@ -267,6 +288,7 @@ class RangedPoint extends Point implements Box {
       minY: values.minY,
       maxX: values.maxX,
       maxY: values.maxY,
+      label: values.label,
     });
   }
 
@@ -297,6 +319,7 @@ class RangedPoint extends Point implements Box {
     minY?: number;
     maxX?: number;
     maxY?: number;
+    label?: string;
   }): RangedPoint {
     return new RangedPoint({
       x: props.x ?? this.x,
@@ -305,6 +328,7 @@ class RangedPoint extends Point implements Box {
       minY: props.minY ?? this.min.y,
       maxX: props.maxX ?? this.max.x,
       maxY: props.maxY ?? this.max.y,
+      label: props.label ?? this.box.label,
     });
   }
 
@@ -323,6 +347,7 @@ class RangedPoint extends Point implements Box {
       minY: this.min.y + dy,
       maxX: this.max.x + dx,
       maxY: this.max.y + dy,
+      label: this.box.label,
     });
   }
 }

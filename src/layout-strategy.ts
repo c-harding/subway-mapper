@@ -46,7 +46,7 @@ export interface StationPosition {
   side: Side;
   textAnchor?: 'start' | 'middle' | 'end';
   dominantBaseline?: 'hanging' | 'middle' | 'alphabetic';
-  safeAreas: readonly RangedPoint[];
+  safeAreas: readonly Box[];
   // The score is a mapping of previous side to a numeric score for this position. A lower score is better.
   score: { [key in Side]?: number } & { none?: number; default: number };
 }
@@ -135,12 +135,8 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
             default: labelBox.lines.length + 1,
           },
           safeAreas: [
-            marker.withPadding({
-              y: layoutConfig.spacing.marker.y,
-            }),
-            label.withPadding({
-              y: layoutConfig.spacing.label.y,
-            }),
+            marker.withPadding({ y: layoutConfig.spacing.marker.y }).with({ label: 'marker' }),
+            label.withPadding({ y: layoutConfig.spacing.label.y }).with({ label: 'label' }),
           ],
         };
       });
@@ -179,19 +175,23 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
           side,
           // The score is calculated as the number of lines, plus a small penalty for not being on a consistent side.
           score: {
-            [side]: 1 - labelBox.lines.length,
-            none: 1 - labelBox.lines.length,
-            default: 1 - labelBox.lines.length + 1,
+            [side]: labelBox.lines.length,
+            none: labelBox.lines.length,
+            default: labelBox.lines.length + 1,
           },
           safeAreas: [
-            marker.withPadding({
-              x: layoutConfig.spacing.marker.x,
-              y: layoutConfig.gap.markerLabel.y * 2,
-            }),
-            label.withPadding({
-              x: layoutConfig.spacing.label.x,
-              y: layoutConfig.gap.markerLabel.y * 2,
-            }),
+            marker
+              .withPadding({
+                x: layoutConfig.spacing.marker.x,
+                y: layoutConfig.gap.markerLabel.y * 2,
+              })
+              .with({ label: 'marker' }),
+            label
+              .withPadding({
+                x: layoutConfig.spacing.label.x,
+                y: layoutConfig.gap.markerLabel.y * 2,
+              })
+              .with({ label: 'label' }),
           ],
         };
       });
@@ -254,11 +254,15 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
           textAnchor,
           dominantBaseline,
           safeAreas: [
-            marker.withPadding(layoutConfig.spacing.marker.scale(Math.SQRT1_2)),
-            label.withPadding({
-              x: layoutConfig.spacing.label.x,
-              y: layoutConfig.gap.markerLabel.y * 2,
-            }),
+            marker
+              .withPadding(layoutConfig.spacing.marker.scale(Math.SQRT1_2))
+              .with({ label: 'marker' }),
+            label
+              .withPadding({
+                x: layoutConfig.spacing.label.x,
+                y: layoutConfig.gap.markerLabel.y * 2,
+              })
+              .with({ label: 'label' }),
           ],
         };
       });
@@ -396,11 +400,7 @@ function reduceStep(
         return null;
       }
       const offset = previousPosition
-        ? Box.separationFactor(
-            previousPosition.safeAreas,
-            [position.marker, position.label],
-            lineDirection,
-          )
+        ? Box.separationFactor(previousPosition.safeAreas, position.safeAreas, lineDirection)
         : 0;
       const box = acc.box.add(bounds.offset(lineDirection.scale(acc.totalOffset + offset)));
       return {

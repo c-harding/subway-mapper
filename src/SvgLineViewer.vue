@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { BoundedBox, Box, Point } from './geometry';
+import { BoundedBox, Box, Point, PointOffset } from './geometry';
 import {
   directionOffset,
   layoutLine,
@@ -13,6 +13,7 @@ import { allDirections, type Direction, type Side } from './model/direction';
 import type { DirectionSegment } from './model/line';
 import { getFontName } from './util/font';
 import { hyphenations } from './util/hyphenation';
+import { modularRangeInclusive } from './util/range';
 import { useSvgMeasurement } from './util/svg';
 
 const { network, line, direction, initialSide, forceSide, compact, maxWidth, maxHeight } =
@@ -30,28 +31,91 @@ const { network, line, direction, initialSide, forceSide, compact, maxWidth, max
 
 const layoutConfig = computed(() => completeLayoutConfig(network.layoutConfig ?? {}));
 
-function makeCurve(prevDirection: Direction, prevPoint: Point, to: LineSegmentDetails) {
-  const nextDirection = to.direction;
+interface PreviousSegment {
+  direction: Direction;
+  point: Point;
+  safeAreas: Box[];
+}
 
-  const relativeDirectionIndex =
-    (allDirections.indexOf(nextDirection) - allDirections.indexOf(prevDirection) + 8) % 8;
+interface CurveOffsetParams {
+  fromSafeAreas: Box[];
+  curveStart: Point;
+  fromDirection: PointOffset;
+  center: Point;
+  toSafeAreas: Box[];
+  curveEnd: Point;
+  toDirection: PointOffset;
+  continuePoint: Point;
+  curveBounds: Box;
+  totalOffset: number;
+}
+
+function curveOffsetBefore(params: CurveOffsetParams): CurveOffsetParams {
+  const safetyOffsetBefore = Box.separationFactor(
+    params.fromSafeAreas,
+    params.toSafeAreas.concat(params.curveBounds),
+    params.fromDirection,
+  );
+  return {
+    fromSafeAreas: params.fromSafeAreas,
+    curveStart: params.curveStart.offset(params.fromDirection.scale(safetyOffsetBefore)),
+    fromDirection: params.fromDirection,
+    center: params.center.offset(params.fromDirection.scale(safetyOffsetBefore)),
+    toSafeAreas: params.toSafeAreas.map((box) =>
+      box.offset(params.fromDirection.scale(safetyOffsetBefore)),
+    ),
+    curveEnd: params.curveEnd.offset(params.fromDirection.scale(safetyOffsetBefore)),
+    toDirection: params.toDirection,
+    continuePoint: params.continuePoint.offset(params.fromDirection.scale(safetyOffsetBefore)),
+    curveBounds: params.curveBounds.offset(params.fromDirection.scale(safetyOffsetBefore)),
+    totalOffset: params.totalOffset + safetyOffsetBefore,
+  };
+}
+
+function curveOffsetAfter(params: CurveOffsetParams): CurveOffsetParams {
+  const safetyOffsetAfter = Box.separationFactor(
+    params.fromSafeAreas.concat([params.curveBounds]),
+    params.toSafeAreas,
+    params.toDirection,
+  );
+
+  return {
+    fromSafeAreas: params.fromSafeAreas,
+    curveStart: params.curveStart,
+    fromDirection: params.fromDirection,
+    center: params.center,
+    toSafeAreas: params.toSafeAreas.map((box) =>
+      box.offset(params.toDirection.scale(safetyOffsetAfter)),
+    ),
+    curveEnd: params.curveEnd,
+    toDirection: params.toDirection,
+    continuePoint: params.continuePoint.offset(params.toDirection.scale(safetyOffsetAfter)),
+    curveBounds: params.curveBounds,
+    totalOffset: params.totalOffset + safetyOffsetAfter,
+  };
+}
+
+function makeCurve(from: PreviousSegment, to: LineSegmentDetails) {
+  const fromIndex = allDirections.indexOf(from.direction);
+  const toIndex = allDirections.indexOf(to.direction);
+  const relativeDirectionIndex = (toIndex - fromIndex + 8) % 8;
 
   if (relativeDirectionIndex === 0) {
     return {
-      center: prevPoint,
+      center: from.point,
       radius: 0,
-      offset: to.entrance.offsetTo(prevPoint),
-      bounds: prevPoint.withSize({ width: 0, height: 0 }),
+      offset: to.entrance.offsetTo(from.point),
+      bounds: from.point.withSize({ width: 0, height: 0 }),
       path: '',
     };
   }
 
   const clockwise = relativeDirectionIndex < 4;
 
-  const directionOffsetPrev = directionOffset(prevDirection);
-  const directionOffsetNext = directionOffset(nextDirection);
+  const directionOffsetPrev = directionOffset(from.direction).unit();
+  const directionOffsetNext = directionOffset(to.direction).unit();
   if (relativeDirectionIndex === 4) {
-    throw new Error('U-turns are not supported: ' + prevDirection + ' to ' + nextDirection);
+    throw new Error('U-turns are not supported: ' + from.direction + ' to ' + to.direction);
   }
 
   let radius: number;
@@ -63,24 +127,50 @@ function makeCurve(prevDirection: Direction, prevPoint: Point, to: LineSegmentDe
         Math.tan(Math.PI / 2 - relativeDirectionIndex * (Math.PI / 8)),
     );
   }
-  const center = prevPoint.offset(
-    directionOffsetPrev.perpendicular(clockwise).unit().scale(radius),
-  );
-  const curveExit = center.offset(
-    directionOffsetNext.perpendicular(!clockwise).unit().scale(radius),
-  );
+  const center = from.point.offset(directionOffsetPrev.perpendicular(clockwise).scale(radius));
+  const curveEnd = center.offset(directionOffsetNext.perpendicular(!clockwise).scale(radius));
+
+  const fromRadiusDirection = (clockwise ? fromIndex + 6 : fromIndex + 2) % 8;
+  const toRadiusDirection = (clockwise ? toIndex + 6 : toIndex + 2) % 8;
+
+  const directions = Array.from(
+    modularRangeInclusive(fromRadiusDirection, toRadiusDirection, 8, clockwise ? 1 : -1),
+  ).map((i) => center.offset(directionOffset(allDirections[i]!).unit().scale(radius)));
+
+  const bounds = Box.bounds(...directions);
+
+  const curveParams: CurveOffsetParams = {
+    fromSafeAreas: from.safeAreas.filter((bounds) => bounds.label !== 'marker'),
+    curveStart: from.point,
+    fromDirection: directionOffsetPrev,
+    center,
+    toSafeAreas: to.positions
+      .flatMap((p) => p.safeAreas)
+      .filter((bounds) => bounds.label !== 'marker')
+      .map((box) => box.offset(to.entrance.offsetTo(curveEnd))),
+    curveEnd,
+    toDirection: directionOffsetNext,
+    continuePoint: curveEnd,
+    curveBounds: bounds,
+    totalOffset: 0,
+  };
+  const offsetOptions = [
+    curveOffsetAfter(curveOffsetBefore(curveParams)),
+    curveOffsetBefore(curveOffsetAfter(curveParams)),
+  ] as const;
+  const chosenOffsetOption =
+    offsetOptions[0].totalOffset <= offsetOptions[1].totalOffset
+      ? offsetOptions[0]
+      : offsetOptions[1];
 
   const sweepFlag = clockwise ? 1 : 0;
 
   return {
-    center,
+    center: chosenOffsetOption.center,
     radius,
-    offset: to.entrance.offsetTo(curveExit),
-    bounds: center.withSize({
-      width: radius * 2,
-      height: radius * 2,
-    }),
-    path: `L ${prevPoint.x} ${prevPoint.y} A ${radius} ${radius} 0 0 ${sweepFlag} ${curveExit.x} ${curveExit.y}`,
+    offset: to.entrance.offsetTo(chosenOffsetOption.continuePoint),
+    bounds: chosenOffsetOption.curveBounds,
+    path: `L ${chosenOffsetOption.curveStart.x} ${chosenOffsetOption.curveStart.y} A ${radius} ${radius} 0 0 ${sweepFlag} ${chosenOffsetOption.curveEnd.x} ${chosenOffsetOption.curveEnd.y}`,
   };
 }
 
@@ -153,12 +243,16 @@ function layoutLineSegment(segment: DirectionSegment): LineSegmentDetails {
   });
 
   const bounds = Box.bounds(...positions.flatMap((pos) => [pos.marker, pos.label]));
-  const safeAreaBounds = Box.bounds(...positions.flatMap((pos) => pos.safeAreas));
 
-  const entrance = joiningPoint(positions[0]!.marker, safeAreaBounds, resolvedDirection, -1);
+  const entrance = joiningPoint(
+    positions[0]!.marker.toPoint(),
+    positions[0]!.marker,
+    resolvedDirection,
+    -1,
+  );
   const exit = joiningPoint(
+    positions[positions.length - 1]!.marker.toPoint(),
     positions[positions.length - 1]!.marker,
-    safeAreaBounds,
     resolvedDirection,
     1,
   );
@@ -168,6 +262,11 @@ function layoutLineSegment(segment: DirectionSegment): LineSegmentDetails {
 
 interface StationPositionWithCurve extends StationPosition {
   curveBefore?: string;
+}
+
+interface CarriedCurve {
+  path: string;
+  bounds: Box[];
 }
 
 const svgProps = computed(
@@ -190,9 +289,8 @@ const svgProps = computed(
         .reduce<
           | {
               positions: readonly StationPositionWithCurve[];
-              prevDirection: Direction;
-              prevPoint: Point;
-              carriedCurve: string | undefined;
+              prevSegment: { direction: Direction; point: Point; safeAreas: Box[] };
+              carriedCurve: CarriedCurve | undefined;
               bounds: Box;
             }
           | undefined
@@ -203,25 +301,43 @@ const svgProps = computed(
             }
             return {
               positions: segment.positions,
-              prevDirection: segment.direction,
+              prevSegment: {
+                direction: segment.direction,
+                point: segment.exit,
+                safeAreas: segment.positions.flatMap((pos) => pos.safeAreas),
+              },
               prevPoint: segment.exit,
               carriedCurve: undefined,
               bounds: segment.bounds,
             };
           }
-          const curve = makeCurve(acc.prevDirection, acc.prevPoint, segment);
+          const curve = makeCurve(acc.prevSegment, segment);
           const adjustedPositions = segment.positions.map<StationPositionWithCurve>((pos) =>
             offsetStationPosition(pos, curve.offset),
           );
-          let carriedCurve: string | undefined;
+          let carriedCurve: CarriedCurve | undefined;
           if (adjustedPositions.length > 0) {
-            adjustedPositions[0]!.curveBefore = (acc.carriedCurve ?? '') + curve.path;
+            adjustedPositions[0]!.curveBefore = (acc.carriedCurve?.path ?? '') + curve.path;
+            adjustedPositions[0]!.safeAreas = adjustedPositions[0]!.safeAreas.concat(
+              acc.carriedCurve?.bounds ?? [],
+              curve.bounds,
+            );
           } else {
             // No stations in this segment; carry the curve forward to the next segment.
-            carriedCurve = (acc.carriedCurve ?? '') + curve.path;
+            carriedCurve = {
+              path: (acc.carriedCurve?.path ?? '') + curve.path,
+              bounds: [...(acc.carriedCurve?.bounds ?? []), curve.bounds],
+            };
           }
           return {
             positions: [...acc.positions, ...adjustedPositions],
+            prevSegment: {
+              direction: segment.direction,
+              point: segment.exit.offset(curve.offset),
+              safeAreas: segment.positions
+                .flatMap((pos) => pos.safeAreas)
+                .map((box) => box.offset(curve.offset)),
+            },
             prevDirection: segment.direction,
             prevPoint: segment.exit.offset(curve.offset),
             carriedCurve,
@@ -272,6 +388,8 @@ const path = computed(() =>
             :width="safeArea.width"
             :height="safeArea.height"
             fill="red"
+            stroke="red"
+            stroke-width="1"
             fill-opacity="0.2"
           />
         </template>
