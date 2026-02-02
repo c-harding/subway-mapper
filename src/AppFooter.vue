@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTitle } from '@vueuse/core';
 import type { Network } from './model';
 
 const { network, networkUrl, mapUrl } = defineProps<{
@@ -9,6 +10,14 @@ const { network, networkUrl, mapUrl } = defineProps<{
 
 const gitHash = import.meta.env.VITE_GIT_HASH;
 const gitDate = import.meta.env.VITE_GIT_DATE && new Date(import.meta.env.VITE_GIT_DATE);
+
+const isDev = import.meta.env.MODE === 'development';
+
+const titlePrefix = isDev ? '[dev] ' : '';
+
+useTitle(
+  () => `${titlePrefix}${network?.name ? `${network.name} | Subway Mapper` : 'Subway Mapper'}`,
+);
 
 const activeUrls = [networkUrl, mapUrl].filter((url): url is URL => url !== undefined);
 </script>

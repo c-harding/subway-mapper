@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useAsyncState } from '@vueuse/core';
 import { provide, useTemplateRef } from 'vue';
 import AppFooter from './AppFooter.vue';
 import ErrorBox from './ErrorBox.vue';
@@ -8,6 +7,7 @@ import { loadNetwork } from './loadNetwork';
 import NetworkRoot from './NetworkRoot.vue';
 import { delayRef } from './util/delayRef';
 import { svgElementInjectionKey } from './util/svg';
+import { useResource } from './util/useResource';
 
 provide(svgElementInjectionKey, useTemplateRef<SVGSVGElement>('svg'));
 
@@ -30,11 +30,10 @@ const {
   state: network,
   error: networkLoadingError,
   execute: reloadNetwork,
-} = useAsyncState(
-  async () => networkUrl && loadNetwork(networkUrl.toString(), mapUrl?.toString()),
-  undefined,
-  { immediate: true, shallow: true },
-);
+} = useResource({
+  request: () => (networkUrl ? { networkUrl, mapUrl } : undefined),
+  loader: ({ request }) => loadNetwork(request.networkUrl.toString(), request.mapUrl?.toString()),
+});
 
 const showLoading = delayRef(loadingNetwork, (isLoading) => (isLoading ? 300 : 500));
 </script>

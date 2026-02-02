@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useTitle } from '@vueuse/core';
 import type { Network } from './model';
 import NetworkListView from './NetworkListView.vue';
 import SvgLineViewerWrapper from './SvgLineViewerWrapper.vue';
@@ -10,8 +9,6 @@ const { network } = defineProps<{
   networkUrl: URL;
   mapUrl?: URL;
 }>();
-
-useTitle(() => (network.name ? `${network.name} | Subway Mapper` : 'Subway Mapper'));
 
 useNetworkFonts(() => network);
 </script>
