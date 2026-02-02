@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import { setEquals } from '../util/set.ts'; // This file is used by Node, so must use .ts extension
+import { PartialLayoutConfig } from './config.ts'; // This file is used by Node, so must use .ts extension
 import { FontNameOrReference } from './font.ts'; // This file is used by Node, so must use .ts extension
 import { LineSymbol } from './line-symbol.ts'; // This file is used by Node, so must use .ts extension
 import { Line, LineDisplay } from './line.ts'; // This file is used by Node, so must use .ts extension
@@ -21,6 +22,9 @@ export const NetworkDisplay = z
       .record(z.string(), LineSymbol)
       .optional()
       .describe('Map of line types to their line symbols'),
+
+    /** Layout configuration for the network */
+    layoutConfig: PartialLayoutConfig.optional().describe('Layout configuration for the network'),
   })
   .meta({ id: 'NetworkDisplay' });
 export type NetworkDisplay = z.infer<typeof NetworkDisplay>;

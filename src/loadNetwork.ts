@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Network, NetworkDisplay } from './model';
 import { definedFilter } from './util/undefined';
+import { mergeLayoutConfig } from './model/config';
 
 export async function loadNetwork(network: string, map?: string): Promise<Network> {
   return parseNetwork(
@@ -37,6 +38,11 @@ function merge(network: Network, mapData?: NetworkDisplay): Network {
         return mapLine ? line.override(mapLine) : line;
       })
       .filter(definedFilter),
+
+    layoutConfig: mergeLayoutConfig(
+      network.layoutConfig ?? {},
+      mapData.layoutConfig ?? {},
+    ),
 
     lineSymbols: {
       ...network.lineSymbols,

@@ -1,7 +1,7 @@
 import * as z from 'zod';
 
 import { FontNameOrReference } from './font.ts'; // This file is used by Node, so must use .ts extension
-import { RawPadding } from './padding.ts'; // This file is used by Node, so must use .ts extension
+import { RawPadding } from './geometry.ts'; // This file is used by Node, so must use .ts extension
 
 export const LineSymbol = z
   .object({

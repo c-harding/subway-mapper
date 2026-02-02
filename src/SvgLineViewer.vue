@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { MapConfig } from './config';
-import { BoundedBox, Box, Padding, Point, Spacing } from './geometry';
+import { BoundedBox, Box, Point } from './geometry';
 import {
   directionOffset,
   layoutLine,
@@ -9,6 +8,7 @@ import {
   type StationPosition,
 } from './layout-strategy';
 import type { Line, Network } from './model';
+import { completeLayoutConfig } from './model/config';
 import { allDirections, type Direction, type Side } from './model/direction';
 import type { DirectionSegment } from './model/line';
 import { getFontName } from './util/font';
@@ -28,26 +28,7 @@ const { network, line, direction, initialSide, forceSide, compact, maxWidth, max
     maxHeight?: number;
   }>();
 
-const mapConfig: MapConfig = {
-  padding: new Padding(10),
-  spacing: {
-    marker: new Spacing({ x: 32, y: 22 }),
-    label: new Spacing({ x: 15, y: 4 }),
-  },
-  gap: {
-    markerLabel: new Spacing(2),
-  },
-  lineWidth: 10,
-  curve: { radius: 50 },
-  marker: {
-    radius: 6,
-    strokeWidth: 3,
-  },
-  label: {
-    fontSize: 30,
-    fontWeight: 600,
-  },
-};
+const layoutConfig = computed(() => completeLayoutConfig(network.layoutConfig ?? {}));
 
 function makeCurve(prevDirection: Direction, prevPoint: Point, to: LineSegmentDetails) {
   const nextDirection = to.direction;
@@ -74,11 +55,12 @@ function makeCurve(prevDirection: Direction, prevPoint: Point, to: LineSegmentDe
   }
 
   let radius: number;
-  if ('radius' in mapConfig.curve) {
-    radius = mapConfig.curve.radius;
+  if ('radius' in layoutConfig.value.curve) {
+    radius = layoutConfig.value.curve.radius;
   } else {
     radius = Math.abs(
-      mapConfig.curve.curvature * Math.tan(Math.PI / 2 - relativeDirectionIndex * (Math.PI / 8)),
+      layoutConfig.value.curve.curvature *
+        Math.tan(Math.PI / 2 - relativeDirectionIndex * (Math.PI / 8)),
     );
   }
   const center = prevPoint.offset(
@@ -111,8 +93,8 @@ function labelStyles(props?: {
 }) {
   return {
     fontFamily: fontFamily.value,
-    fontSize: `${mapConfig.label.fontSize}px`,
-    fontWeight: props?.fontWeight ?? mapConfig.label.fontWeight,
+    fontSize: `${layoutConfig.value.label.fontSize}px`,
+    fontWeight: props?.fontWeight ?? layoutConfig.value.label.fontWeight,
     textAnchor: props?.textAnchor ?? 'middle',
     dominantBaseline: props?.dominantBaseline ?? 'middle',
   } as const;
@@ -154,14 +136,14 @@ function layoutLineSegment(segment: DirectionSegment): LineSegmentDetails {
     initialSide,
     side: forceSide ? initialSide : undefined,
     direction: resolvedDirection,
-    mapConfig,
+    layoutConfig: layoutConfig.value,
     debugDescription: line.name,
     compact,
     bounds: new BoundedBox({ maxWidth, maxHeight }),
     getLabelBoxes: (station, props) =>
       svgMeasurement.textBBoxes(
         hyphenations(station.name, network.hyphenation),
-        mapConfig.label.lineHeight ?? mapConfig.label.fontSize,
+        layoutConfig.value.label.lineHeight ?? layoutConfig.value.label.fontSize,
         labelStyles({
           textAnchor: props?.textAnchor,
           fontWeight: station.terminus ? 700 : undefined,
@@ -264,7 +246,7 @@ const viewBox = computed(() => {
     return undefined;
   }
 
-  const padded = svgProps.value.bounds.withPadding(mapConfig.padding);
+  const padded = svgProps.value.bounds.withPadding(layoutConfig.value.padding);
 
   return `${padded.min.x} ${padded.min.y} ${padded.width} ${padded.height}`;
 });
@@ -298,7 +280,7 @@ const path = computed(() =>
         <path
           :d="path"
           stroke="white"
-          :stroke-width="mapConfig.lineWidth + mapConfig.marker.strokeWidth * 2"
+          :stroke-width="layoutConfig.lineWidth + layoutConfig.marker.strokeWidth * 2"
           stroke-linecap="butt"
           fill="none"
         />
@@ -309,7 +291,7 @@ const path = computed(() =>
           :key="pos.station.name"
           :cx="pos.marker.x"
           :cy="pos.marker.y"
-          :r="mapConfig.marker.radius + mapConfig.marker.strokeWidth * 2"
+          :r="layoutConfig.marker.radius + layoutConfig.marker.strokeWidth * 2"
           fill="white"
         />
       </g>
@@ -317,7 +299,7 @@ const path = computed(() =>
         <path
           :d="path"
           :stroke="line.color"
-          :stroke-width="mapConfig.lineWidth"
+          :stroke-width="layoutConfig.lineWidth"
           stroke-linecap="round"
           fill="none"
         />
@@ -328,7 +310,7 @@ const path = computed(() =>
           :key="pos.station.name"
           :cx="pos.marker.x"
           :cy="pos.marker.y"
-          :r="mapConfig.marker.radius + mapConfig.marker.strokeWidth"
+          :r="layoutConfig.marker.radius + layoutConfig.marker.strokeWidth"
           fill="black"
         />
       </g>
@@ -338,7 +320,7 @@ const path = computed(() =>
           :key="pos.station.name"
           :cx="pos.marker.x"
           :cy="pos.marker.y"
-          :r="mapConfig.marker.radius"
+          :r="layoutConfig.marker.radius"
           fill="white"
         />
       </g>
@@ -360,7 +342,7 @@ const path = computed(() =>
             v-for="(line, i) in pos.labelLines"
             :key="line"
             :x="pos.label.x"
-            :dy="i === 0 ? 0 : (mapConfig.label.lineHeight ?? mapConfig.label.fontSize)"
+            :dy="i === 0 ? 0 : (layoutConfig.label.lineHeight ?? layoutConfig.label.fontSize)"
           >
             {{ line }}
           </tspan>

@@ -25,6 +25,14 @@
         "$ref": "#/definitions/LineSymbol"
       }
     },
+    "layoutConfig": {
+      "description": "Layout configuration for the network",
+      "allOf": [
+        {
+          "$ref": "#/definitions/LayoutConfig"
+        }
+      ]
+    },
     "name": {
       "description": "Name of the network",
       "type": "string"
@@ -96,6 +104,39 @@
         },
         "lineType": {
           "type": "string"
+        },
+        "directions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "description": "The name of the first station in the segment",
+                "type": "string"
+              },
+              "end": {
+                "description": "The name of the last station in the segment",
+                "type": "string"
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "n",
+                  "ne",
+                  "e",
+                  "se",
+                  "s",
+                  "sw",
+                  "w",
+                  "nw"
+                ],
+                "description": "The direction of the line segment"
+              }
+            },
+            "required": [
+              "direction"
+            ]
+          }
         },
         "stations": {
           "type": "array",
@@ -201,6 +242,149 @@
         }
       ],
       "id": "Padding"
+    },
+    "LayoutConfig": {
+      "type": "object",
+      "properties": {
+        "padding": {
+          "description": "Padding around the map",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Padding"
+            }
+          ]
+        },
+        "spacing": {
+          "description": "Spacing settings",
+          "type": "object",
+          "properties": {
+            "marker": {
+              "description": "Spacing around markers",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Spacing"
+                }
+              ]
+            },
+            "label": {
+              "description": "Spacing around labels",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Spacing"
+                }
+              ]
+            }
+          }
+        },
+        "gap": {
+          "description": "Gap settings",
+          "type": "object",
+          "properties": {
+            "markerLabel": {
+              "description": "Gap between markers and labels",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Spacing"
+                }
+              ]
+            }
+          }
+        },
+        "lineWidth": {
+          "description": "Width of the lines",
+          "type": "number",
+          "minimum": 0
+        },
+        "curve": {
+          "description": "Curve settings",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "radius": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Radius of curves"
+                }
+              },
+              "required": [
+                "radius"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "curvature": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Curvature of curves (distance from angled point to start of curve"
+                }
+              },
+              "required": [
+                "curvature"
+              ]
+            }
+          ]
+        },
+        "marker": {
+          "description": "Marker settings",
+          "type": "object",
+          "properties": {
+            "radius": {
+              "description": "Radius of markers",
+              "type": "number",
+              "minimum": 0
+            },
+            "strokeWidth": {
+              "description": "Stroke width of markers",
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "label": {
+          "description": "Label settings",
+          "type": "object",
+          "properties": {
+            "fontSize": {
+              "description": "Font size for labels",
+              "type": "number",
+              "minimum": 1
+            },
+            "fontWeight": {
+              "description": "Font weight for labels",
+              "type": "number",
+              "minimum": 100,
+              "maximum": 900
+            },
+            "lineHeight": {
+              "description": "Line height for multi-line labels",
+              "type": "number"
+            }
+          }
+        }
+      },
+      "id": "LayoutConfig"
+    },
+    "Spacing": {
+      "anyOf": [
+        {
+          "description": "Uniform spacing in all directions",
+          "type": "number"
+        },
+        {
+          "description": "Spacing in x and y directions",
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "required": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "id": "Spacing"
     }
   }
 }

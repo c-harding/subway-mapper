@@ -1,16 +1,22 @@
-import type { MapConfig } from './config';
 import { BoundedBox, Box, Point, PointOffset, type RangedPoint } from './geometry';
 import type { BoxInput } from './geometry/Point';
 
 import type { Station } from './model';
+import type { LayoutConfig } from './model/config';
 import { allDirections, type Direction, type Side } from './model/direction';
 import { range } from './util/range';
 import type { TextBox } from './util/svg';
 
-const totalStationWidth = (mapConfig: MapConfig) =>
-  Math.max(mapConfig.lineWidth, mapConfig.marker.radius * 2 + mapConfig.marker.strokeWidth * 2);
-const totalStationHeight = (mapConfig: MapConfig) =>
-  Math.max(mapConfig.lineWidth, mapConfig.marker.radius * 2 + mapConfig.marker.strokeWidth * 2);
+const totalStationWidth = (layoutConfig: LayoutConfig) =>
+  Math.max(
+    layoutConfig.lineWidth,
+    layoutConfig.marker.radius * 2 + layoutConfig.marker.strokeWidth * 2,
+  );
+const totalStationHeight = (layoutConfig: LayoutConfig) =>
+  Math.max(
+    layoutConfig.lineWidth,
+    layoutConfig.marker.radius * 2 + layoutConfig.marker.strokeWidth * 2,
+  );
 
 export function directionOffset(direction: Direction, side?: 'left' | 'right'): PointOffset {
   const index = allDirections.indexOf(direction);
@@ -65,7 +71,7 @@ export interface GetPositionsProps {
   side?: Side;
   direction: Direction;
   station: Station;
-  mapConfig: MapConfig;
+  layoutConfig: LayoutConfig;
   bounds?: BoundedBox;
   getLabelBoxes: (
     station: Station,
@@ -88,13 +94,13 @@ export interface LayoutStrategy {
 const layoutStrategies: Record<string, LayoutStrategy> = {
   vertical: {
     direction: ['n', 's'],
-    getPositions({ station, direction, side, mapConfig, getLabelBoxes }) {
+    getPositions({ station, direction, side, layoutConfig, getLabelBoxes }) {
       const labelDirection = directionOffset(direction, side);
 
       const textAnchor = labelDirection.dx < 0 ? 'end' : 'start';
       const marker = Point.ORIGIN.withSize({
-        width: totalStationWidth(mapConfig),
-        height: totalStationHeight(mapConfig),
+        width: totalStationWidth(layoutConfig),
+        height: totalStationHeight(layoutConfig),
       });
 
       const labelBoxes = getLabelBoxes(station, { textAnchor });
@@ -102,15 +108,15 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
         const label = new Point({
           x:
             labelDirection.dx < 0
-              ? marker.min.x - mapConfig.gap.markerLabel.x
-              : marker.max.x + mapConfig.gap.markerLabel.x,
+              ? marker.min.x - layoutConfig.gap.markerLabel.x
+              : marker.max.x + layoutConfig.gap.markerLabel.x,
           y: 0,
         })
           .withSizeFromBox(labelBox)
           .offset({
             dy:
               ((1 - labelBox.lines.length) / 2) *
-              (mapConfig.label.lineHeight ?? mapConfig.label.fontSize),
+              (layoutConfig.label.lineHeight ?? layoutConfig.label.fontSize),
           });
 
         return {
@@ -130,10 +136,10 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
           },
           safeAreas: [
             marker.withPadding({
-              y: mapConfig.spacing.marker.y,
+              y: layoutConfig.spacing.marker.y,
             }),
             label.withPadding({
-              y: mapConfig.spacing.label.y,
+              y: layoutConfig.spacing.label.y,
             }),
           ],
         };
@@ -142,11 +148,11 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
   },
   horizontal: {
     direction: ['e', 'w'],
-    getPositions({ station, direction, side, mapConfig, getLabelBoxes }) {
+    getPositions({ station, direction, side, layoutConfig, getLabelBoxes }) {
       const labelDirection = directionOffset(direction, side);
       const marker = Point.ORIGIN.withSize({
-        width: totalStationWidth(mapConfig),
-        height: totalStationHeight(mapConfig),
+        width: totalStationWidth(layoutConfig),
+        height: totalStationHeight(layoutConfig),
       });
 
       const labelBoxes = getLabelBoxes(station);
@@ -155,8 +161,8 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
           x: marker.x,
           y:
             labelDirection.dy < 0
-              ? marker.min.y - mapConfig.gap.markerLabel.y
-              : marker.max.y + mapConfig.gap.markerLabel.y,
+              ? marker.min.y - layoutConfig.gap.markerLabel.y
+              : marker.max.y + layoutConfig.gap.markerLabel.y,
         })
           .withSizeFromBox(labelBox)
           .offset({
@@ -179,12 +185,12 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
           },
           safeAreas: [
             marker.withPadding({
-              x: mapConfig.spacing.marker.x,
-              y: mapConfig.gap.markerLabel.y * 2,
+              x: layoutConfig.spacing.marker.x,
+              y: layoutConfig.gap.markerLabel.y * 2,
             }),
             label.withPadding({
-              x: mapConfig.spacing.label.x,
-              y: mapConfig.gap.markerLabel.y * 2,
+              x: layoutConfig.spacing.label.x,
+              y: layoutConfig.gap.markerLabel.y * 2,
             }),
           ],
         };
@@ -193,15 +199,15 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
   },
   diagonal: {
     direction: ['ne', 'nw', 'se', 'sw'],
-    getPositions({ station, direction, side, mapConfig, getLabelBoxes }) {
+    getPositions({ station, direction, side, layoutConfig, getLabelBoxes }) {
       const labelDirection = directionOffset(direction, side);
 
       const textAnchor = labelDirection.dx < 0 ? 'end' : 'start';
       const dominantBaseline = labelDirection.dy > 0 ? 'hanging' : 'alphabetic';
 
       const marker = Point.ORIGIN.withSize({
-        width: totalStationWidth(mapConfig) / Math.SQRT2,
-        height: totalStationHeight(mapConfig) / Math.SQRT2,
+        width: totalStationWidth(layoutConfig) / Math.SQRT2,
+        height: totalStationHeight(layoutConfig) / Math.SQRT2,
       });
 
       const labelBoxes = getLabelBoxes(station, { textAnchor, dominantBaseline });
@@ -209,19 +215,23 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
         const label = new Point({
           x:
             labelDirection.dx > 0
-              ? (totalStationWidth(mapConfig) / 2 + mapConfig.gap.markerLabel.y / 2) / Math.SQRT2
-              : -(totalStationWidth(mapConfig) / 2 + mapConfig.gap.markerLabel.y / 2) / Math.SQRT2,
+              ? (totalStationWidth(layoutConfig) / 2 + layoutConfig.gap.markerLabel.y / 2) /
+                Math.SQRT2
+              : -(totalStationWidth(layoutConfig) / 2 + layoutConfig.gap.markerLabel.y / 2) /
+                Math.SQRT2,
           y:
             labelDirection.dy > 0
-              ? (totalStationHeight(mapConfig) / 2 + mapConfig.gap.markerLabel.y / 2) / Math.SQRT2
-              : -(totalStationHeight(mapConfig) / 2 + mapConfig.gap.markerLabel.y / 2) / Math.SQRT2,
+              ? (totalStationHeight(layoutConfig) / 2 + layoutConfig.gap.markerLabel.y / 2) /
+                Math.SQRT2
+              : -(totalStationHeight(layoutConfig) / 2 + layoutConfig.gap.markerLabel.y / 2) /
+                Math.SQRT2,
         })
           .withSizeFromBox(labelBox)
           .offset({
             dy:
               labelDirection.dy > 0
                 ? 0
-                : -(mapConfig.label.lineHeight ?? mapConfig.label.fontSize) *
+                : -(layoutConfig.label.lineHeight ?? layoutConfig.label.fontSize) *
                   (labelBox.lines.length - 1),
           });
 
@@ -244,10 +254,10 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
           textAnchor,
           dominantBaseline,
           safeAreas: [
-            marker.withPadding(mapConfig.spacing.marker.scale(Math.SQRT1_2)),
+            marker.withPadding(layoutConfig.spacing.marker.scale(Math.SQRT1_2)),
             label.withPadding({
-              x: mapConfig.spacing.label.x,
-              y: mapConfig.gap.markerLabel.y * 2,
+              x: layoutConfig.spacing.label.x,
+              y: layoutConfig.gap.markerLabel.y * 2,
             }),
           ],
         };

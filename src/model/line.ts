@@ -1,6 +1,7 @@
-import { skipUndefined } from '@/util/undefined.ts';
 import * as z from 'zod';
-import { allDirections, type Direction } from './direction.ts';
+
+import { skipUndefined } from '../util/undefined.ts'; // This file is used by Node, so must use .ts extension
+import { allDirections, type Direction } from './direction.ts'; // This file is used by Node, so must use .ts extension
 import { RawStation, type Station } from './station.ts'; // This file is used by Node, so must use .ts extension
 
 export const DirectionSpec = z.object({
