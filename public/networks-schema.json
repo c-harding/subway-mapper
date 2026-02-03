@@ -138,6 +138,23 @@
             ]
           }
         },
+        "labelPositions": {
+          "type": "object",
+          "additionalProperties": {
+            "nullable": true,
+            "type": "string",
+            "enum": [
+              "n",
+              "ne",
+              "e",
+              "se",
+              "s",
+              "sw",
+              "w",
+              "nw"
+            ]
+          }
+        },
         "stations": {
           "type": "array",
           "items": {

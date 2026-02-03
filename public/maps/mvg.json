@@ -44,7 +44,10 @@
                     "end": "Erding",
                     "direction": "n"
                 }
-            ]
+            ],
+            "labelPositions": {
+                "Riem": "se"
+            }
         },
         {
             "name": "U3",

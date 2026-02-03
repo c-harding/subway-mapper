@@ -121,6 +121,23 @@
               "direction"
             ]
           }
+        },
+        "labelPositions": {
+          "type": "object",
+          "additionalProperties": {
+            "nullable": true,
+            "type": "string",
+            "enum": [
+              "n",
+              "ne",
+              "e",
+              "se",
+              "s",
+              "sw",
+              "w",
+              "nw"
+            ]
+          }
         }
       },
       "id": "LineDisplay",
@@ -182,6 +199,23 @@
             },
             "required": [
               "direction"
+            ]
+          }
+        },
+        "labelPositions": {
+          "type": "object",
+          "additionalProperties": {
+            "nullable": true,
+            "type": "string",
+            "enum": [
+              "n",
+              "ne",
+              "e",
+              "se",
+              "s",
+              "sw",
+              "w",
+              "nw"
             ]
           }
         }

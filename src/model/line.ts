@@ -1,5 +1,6 @@
 import * as z from 'zod';
 
+import { zNullToOptional } from '../util/model.ts'; // This file is used by Node, so must use .ts extension
 import { skipUndefined } from '../util/undefined.ts'; // This file is used by Node, so must use .ts extension
 import { allDirections, type Direction } from './direction.ts'; // This file is used by Node, so must use .ts extension
 import { RawStation, type Station } from './station.ts'; // This file is used by Node, so must use .ts extension
@@ -49,6 +50,11 @@ const RawLineDisplay = z
 
     /** The directions of the segments of the line */
     directions: z.array(DirectionSpec).optional(),
+
+    labelPositions: z
+      .record(z.string(), zNullToOptional(z.enum(allDirections)))
+      .optional()
+      .transform((obj) => obj ?? {}),
   })
   .meta({ id: 'RawLineDisplay' });
 
@@ -95,6 +101,8 @@ class LineImpl {
   readonly directions?: DirectionSpec[];
   readonly directionSegments: readonly DirectionSegment[];
 
+  readonly labelPositions: Partial<Record<string, Direction>>;
+
   constructor(rawLine: z.infer<typeof RawLine>) {
     this.id = rawLine.id ?? rawLine.name;
     this.name = rawLine.name;
@@ -112,6 +120,8 @@ class LineImpl {
       this.directions ?? [],
       this.id,
     );
+
+    this.labelPositions = rawLine.labelPositions;
   }
 
   override(data: z.infer<typeof RawLineDisplay>): LineImpl {
@@ -120,6 +130,7 @@ class LineImpl {
       ...skipUndefined(data),
       stations: this.stations,
       id: this.id,
+      labelPositions: { ...this.labelPositions, ...data.labelPositions },
     });
   }
 

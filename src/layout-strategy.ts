@@ -1,9 +1,9 @@
 import { BoundedBox, Box, Point, PointOffset, type RangedPoint } from './geometry';
 import type { BoxInput } from './geometry/Point';
 
-import type { Station } from './model';
+import { Line, type Station } from './model';
 import type { LayoutConfig } from './model/config';
-import { allDirections, type Direction, type Side } from './model/direction';
+import { allDirections, allSides, type Direction, type Side } from './model/direction';
 import { range } from './util/range';
 import type { TextBox } from './util/svg';
 
@@ -18,15 +18,30 @@ const totalStationHeight = (layoutConfig: LayoutConfig) =>
     layoutConfig.marker.radius * 2 + layoutConfig.marker.strokeWidth * 2,
   );
 
-export function directionOffset(direction: Direction, side?: 'left' | 'right'): PointOffset {
+function directionOfSide(direction: Direction, side: Side): Direction {
   const index = allDirections.indexOf(direction);
   if (index === -1) {
     throw new Error(`Invalid direction: ${direction}`);
   }
   if (side === 'left') {
-    direction = allDirections[(index + 6) % 8]!;
-  } else if (side === 'right') {
-    direction = allDirections[(index + 2) % 8]!;
+    return allDirections[(index + 6) % 8]!;
+  } else {
+    return allDirections[(index + 2) % 8]!;
+  }
+}
+
+export function directionIndexChange(fromDirection: Direction, toDirection: Direction): number {
+  const fromIndex = allDirections.indexOf(fromDirection);
+  const toIndex = allDirections.indexOf(toDirection);
+  if (fromIndex === -1 || toIndex === -1) {
+    throw new Error(`Invalid direction: ${fromDirection} or ${toDirection}`);
+  }
+  return ((((toIndex - fromIndex + 3) % 8) + 8) % 8) - 3;
+}
+
+export function directionOffset(direction: Direction, side?: 'left' | 'right'): PointOffset {
+  if (side) {
+    direction = directionOfSide(direction, side);
   }
   return new PointOffset({
     dx: direction.includes('e') ? 1 : direction.includes('w') ? -1 : 0,
@@ -70,6 +85,7 @@ export function offsetStationPosition(
 export interface GetPositionsProps {
   side?: Side;
   direction: Direction;
+  line: Line;
   station: Station;
   layoutConfig: LayoutConfig;
   bounds?: BoundedBox;
@@ -270,17 +286,34 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
   },
 };
 
+function getSideFromLabelPosition(
+  lineDirection: Direction,
+  labelPosition: Direction | undefined,
+): readonly Side[] {
+  if (!labelPosition) {
+    return allSides;
+  }
+  const index = directionIndexChange(lineDirection, labelPosition);
+  if (index % 4 === 0) {
+    return allSides;
+  }
+  return index > 0 ? ['right'] : ['left'];
+}
+
 function getPositions(props: GetPositionsProps) {
   return Object.entries(layoutStrategies)
     .filter(([, strategy]) => strategy.direction.includes(props.direction))
-    .flatMap(([, strategy]) =>
-      (props.side ? [props.side] : (['left', 'right'] as const)).flatMap((side) =>
+    .flatMap(([, strategy]) => {
+      const sides = props.side
+        ? [props.side]
+        : getSideFromLabelPosition(props.direction, props.line.labelPositions[props.station.name]);
+      return sides.flatMap((side) =>
         strategy.getPositions({
           ...props,
           side,
         }),
-      ),
-    );
+      );
+    });
 }
 
 interface LayoutLineProps extends Omit<GetPositionsProps, 'station'> {

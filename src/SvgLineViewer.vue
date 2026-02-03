@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import ErrorBox from './ErrorBox.vue';
 import { BoundedBox, Box, Point, PointOffset } from './geometry';
 import {
+  directionIndexChange,
   directionOffset,
   layoutLine,
   offsetStationPosition,
@@ -100,7 +101,7 @@ function curveOffsetAfter(params: CurveOffsetParams): CurveOffsetParams {
 function makeCurve(from: PreviousSegment, to: LineSegmentDetails) {
   const fromIndex = allDirections.indexOf(from.direction);
   const toIndex = allDirections.indexOf(to.direction);
-  const relativeDirectionIndex = (toIndex - fromIndex + 8) % 8;
+  const relativeDirectionIndex = directionIndexChange(from.direction, to.direction);
 
   const directionOffsetPrev = directionOffset(from.direction).unit();
   const directionOffsetNext = directionOffset(to.direction).unit();
@@ -123,10 +124,11 @@ function makeCurve(from: PreviousSegment, to: LineSegmentDetails) {
     };
   }
 
-  const clockwise = relativeDirectionIndex < 4;
   if (relativeDirectionIndex === 4) {
     throw new Error('U-turns are not supported: ' + from.direction + ' to ' + to.direction);
   }
+
+  const clockwise = relativeDirectionIndex > 0;
 
   let radius: number;
   if ('radius' in layoutConfig.value.curve) {
@@ -235,6 +237,7 @@ function layoutLineSegment(segment: DirectionSegment): LineSegmentDetails {
 
   const positions = layoutLine({
     stations: segment.stations,
+    line,
     initialSide,
     side: forceSide ? initialSide : undefined,
     direction: resolvedDirection,
@@ -296,17 +299,16 @@ const svgProps = computed(
     }
 
     try {
+      interface ReduceStep {
+        positions: readonly StationPositionWithCurve[];
+        prevSegment: { direction: Direction; point: Point; safeAreas: Box[] };
+        carriedCurve: CarriedCurve | undefined;
+        bounds: Box;
+      }
+
       const laidOutSegments = line.directionSegments
         .map((segment) => layoutLineSegment(segment))
-        .reduce<
-          | {
-              positions: readonly StationPositionWithCurve[];
-              prevSegment: { direction: Direction; point: Point; safeAreas: Box[] };
-              carriedCurve: CarriedCurve | undefined;
-              bounds: Box;
-            }
-          | undefined
-        >((acc, segment) => {
+        .reduce((acc, segment): ReduceStep => {
           if (!acc) {
             if (segment.positions.length === 0) {
               throw new Error('First segment has no stations');
@@ -318,7 +320,6 @@ const svgProps = computed(
                 point: segment.exit,
                 safeAreas: segment.positions.flatMap((pos) => pos.safeAreas),
               },
-              prevPoint: segment.exit,
               carriedCurve: undefined,
               bounds: segment.bounds,
             };
@@ -350,8 +351,6 @@ const svgProps = computed(
                 .flatMap((pos) => pos.safeAreas)
                 .map((box) => box.offset(curve.offset)),
             },
-            prevDirection: segment.direction,
-            prevPoint: segment.exit.offset(curve.offset),
             carriedCurve,
             bounds: Box.bounds(acc.bounds, segment.bounds.offset(curve.offset), curve.bounds),
           };
