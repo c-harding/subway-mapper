@@ -3,10 +3,16 @@ import { Network, NetworkDisplay } from './model';
 import { mergeLayoutConfig } from './model/config';
 import { definedFilter } from './util/undefined';
 
-export async function loadNetwork(network: string, map?: string): Promise<Network> {
+export async function loadNetwork(
+  network: string,
+  map?: string,
+  options: { abortSignal?: AbortSignal } = {},
+): Promise<Network> {
   return parseNetwork(
-    axios.get(network).then((res) => res.data),
-    map !== undefined ? axios.get(map).then((res) => res.data) : undefined,
+    axios.get(network, { signal: options.abortSignal }).then((res) => res.data),
+    map !== undefined
+      ? axios.get(map, { signal: options.abortSignal }).then((res) => res.data)
+      : undefined,
   );
 }
 

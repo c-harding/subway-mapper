@@ -17,7 +17,7 @@ type ResourceResult<R> = UseAsyncStateReturn<R, [], true>;
 export function useResource<T, R>(options: {
   request: MaybeRefOrGetter<T>;
   hotUrls?: NoInfer<(params: { request: Exclude<T, undefined> }) => string[]>;
-  loader: (params: { request: Exclude<T, undefined> }) => Promise<R>;
+  loader: (params: { request: Exclude<T, undefined>; abortSignal: AbortSignal }) => Promise<R>;
   defaultValue: R;
   resetOnExecute?: boolean;
   delay?: number;
@@ -26,7 +26,7 @@ export function useResource<T, R>(options: {
 export function useResource<T, R>(options: {
   request: MaybeRefOrGetter<T>;
   hotUrls?: NoInfer<(params: { request: Exclude<T, undefined> }) => string[]>;
-  loader: (params: { request: Exclude<T, undefined> }) => Promise<R>;
+  loader: (params: { request: Exclude<T, undefined>; abortSignal: AbortSignal }) => Promise<R>;
   defaultValue?: R | undefined;
   resetOnExecute?: boolean;
   delay?: number;
@@ -35,17 +35,22 @@ export function useResource<T, R>(options: {
 export function useResource<T, R>(options: {
   request: MaybeRefOrGetter<T>;
   hotUrls?: NoInfer<(params: { request: Exclude<T, undefined> }) => string[]>;
-  loader: (params: { request: Exclude<T, undefined> }) => Promise<R>;
+  loader: (params: { request: Exclude<T, undefined>; abortSignal: AbortSignal }) => Promise<R>;
   defaultValue?: R | undefined;
   resetOnExecute?: boolean;
   delay?: number;
 }): ResourceResult<R | undefined> {
+  let previousAbortController: AbortController | undefined;
   const request = toRef(options.request);
   const result = useAsyncState(
-    async () =>
-      request.value !== undefined
-        ? await options.loader({ request: request.value })
-        : options.defaultValue,
+    async () => {
+      previousAbortController?.abort();
+      const abortController = new AbortController();
+      previousAbortController = abortController;
+      return request.value !== undefined
+        ? await options.loader({ request: request.value, abortSignal: abortController.signal })
+        : options.defaultValue;
+    },
     options.defaultValue,
     { immediate: true, resetOnExecute: options.resetOnExecute ?? true, delay: options.delay },
   );

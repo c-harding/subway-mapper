@@ -39,7 +39,8 @@ const {
 } = useResource({
   request: () => (networkUrl ? { networkUrl, mapUrl } : undefined),
   hotUrls: ({ request }) => [request.networkUrl, request.mapUrl].filter(definedFilter),
-  loader: ({ request }) => loadNetwork(request.networkUrl, request.mapUrl),
+  loader: ({ request, abortSignal }) =>
+    loadNetwork(request.networkUrl, request.mapUrl, { abortSignal }),
 });
 
 const showLoading = delayRef(loadingNetwork, (isLoading) => (isLoading ? 300 : 500));
