@@ -145,6 +145,22 @@ class LineImpl {
     directionSpecs: readonly DirectionSpec[],
     id: string,
   ) {
+    const stationNames = new Set(stations.map((station) => station.name));
+    for (const spec of directionSpecs) {
+      if (spec.start && !stationNames.has(spec.start)) {
+        console.warn(
+          `Warning: Direction spec for line ${id} has a start station "${spec.start}" that does not exist on the line.`,
+        );
+        spec.start = undefined;
+      }
+      if (spec.end && !stationNames.has(spec.end)) {
+        console.warn(
+          `Warning: Direction spec for line ${id} has an end station "${spec.end}" that does not exist on the line.`,
+        );
+        spec.end = undefined;
+      }
+    }
+
     // The accumulated completed segments. Empty until a segment is completed.
     const segments: DirectionSegment[] = [];
     // The current segment being built, and its spec. Undefined after a segment is completed.
@@ -174,11 +190,11 @@ class LineImpl {
           current = { segment: [station], spec: undefined };
         }
       } else {
-        // If the current segment has no spec, check if the next spec starts here.
+        // If the current segment has no spec, or no end, check if the next spec starts here.
         const nextSpecStart = directionSpecs[nextSpecIndex]?.start;
-        if (!current.spec && nextSpecStart === station.name) {
+        if (!current.spec?.end && nextSpecStart && nextSpecStart === station.name) {
           // If we are in a segment without a spec, but the next spec starts here, complete the current segment and start a new one.
-          segments.push({ direction: undefined, stations: current.segment });
+          segments.push({ direction: current.spec?.direction, stations: current.segment });
           current = { segment: [station], spec: directionSpecs[nextSpecIndex] };
           nextSpecIndex++;
         } else {
@@ -204,6 +220,7 @@ class LineImpl {
         'was never reached.',
       );
     }
+
     return segments;
   }
 }

@@ -100,20 +100,28 @@ function makeCurve(from: PreviousSegment, to: LineSegmentDetails) {
   const toIndex = allDirections.indexOf(to.direction);
   const relativeDirectionIndex = (toIndex - fromIndex + 8) % 8;
 
+  const directionOffsetPrev = directionOffset(from.direction).unit();
+  const directionOffsetNext = directionOffset(to.direction).unit();
+
   if (relativeDirectionIndex === 0) {
+    const factor = Box.separationFactor(
+      from.safeAreas,
+      to.positions
+        .flatMap((p) => p.safeAreas)
+        .map((box) => box.offset(to.entrance.offsetTo(from.point))),
+      directionOffsetPrev,
+    );
+    const continuePoint = from.point.offset(directionOffsetPrev.scale(factor));
     return {
       center: from.point,
       radius: 0,
-      offset: to.entrance.offsetTo(from.point),
+      offset: to.entrance.offsetTo(continuePoint),
       bounds: from.point.withSize({ width: 0, height: 0 }),
       path: '',
     };
   }
 
   const clockwise = relativeDirectionIndex < 4;
-
-  const directionOffsetPrev = directionOffset(from.direction).unit();
-  const directionOffsetNext = directionOffset(to.direction).unit();
   if (relativeDirectionIndex === 4) {
     throw new Error('U-turns are not supported: ' + from.direction + ' to ' + to.direction);
   }

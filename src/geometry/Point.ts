@@ -207,6 +207,10 @@ export class Box {
     newBoxes: readonly Box[],
     offset: PointOffsetLike,
   ): number {
+    if (newBoxes.length === 0 || oldBoxes.length === 0) {
+      return 0;
+    }
+
     let factor = 0;
 
     let movedNewBoxes = newBoxes;
