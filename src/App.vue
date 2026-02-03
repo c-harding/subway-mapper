@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { provide, useTemplateRef } from 'vue';
+import * as z from 'zod';
 import AppFooter from './AppFooter.vue';
 import ErrorBox from './ErrorBox.vue';
 import LoadingSpinner from './LoadingSpinner.vue';
@@ -52,14 +53,16 @@ const showLoading = delayRef(loadingNetwork, (isLoading) => (isLoading ? 300 : 5
     No networks were found on the server (in <code>./networks/</code>). Please add at least one
     network JSON file to use Subway Mapper.
   </ErrorBox>
-  <ErrorBox v-else-if="networkLoadingError">
+  <ErrorBox
+    v-else-if="networkLoadingError"
+    :stackTrace="networkLoadingError instanceof Error ? networkLoadingError.stack : undefined"
+  >
     The network <code>{{ networkUrl }}</code> could not be loaded, with error:
     <template #pre>
-      <pre>{{
-        networkLoadingError instanceof Error
-          ? (networkLoadingError.message + '\n' + networkLoadingError.stack).trim()
-          : networkLoadingError
+      <pre v-if="networkLoadingError instanceof z.ZodError">{{
+        z.prettifyError(networkLoadingError)
       }}</pre>
+      <pre v-else>{{ networkLoadingError }}</pre>
     </template>
     <template #actions>
       <button @click="() => reloadNetwork()">Try again</button>

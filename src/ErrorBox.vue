@@ -1,22 +1,72 @@
 <script setup lang="ts">
-const { errorMessage = 'An unknown error occurred.', color = 'red' } = defineProps<{
+import { computed, ref } from 'vue';
+
+const {
+  errorMessage,
+  color = 'red',
+  error,
+  stackTrace: providedStackTrace,
+} = defineProps<{
+  error?: unknown;
   errorMessage?: string;
   color?: string;
+  stackTrace?: string;
 }>();
+
+const causes = computed(() => {
+  if (!(error instanceof Error)) {
+    return [
+      {
+        cause: undefined,
+        message: error ? String(error) : (errorMessage ?? 'An unknown error occurred.'),
+        stack: providedStackTrace,
+      },
+    ];
+  }
+
+  const causes: Error[] = [error];
+  while (causes[causes.length - 1]?.cause instanceof Error) {
+    causes.push(causes[causes.length - 1]?.cause as Error);
+  }
+  return causes;
+});
+
+const causeCount = ref(2);
 </script>
 
 <template>
   <div :class="$style.error">
-    <div :class="$style.errorRow">
-      <div :class="$style.errorIcon"><slot name="icon">⚠︎</slot></div>
-      <div :class="$style.errorMessage">
-        <slot>{{ errorMessage }}</slot>
+    <div v-for="(cause, i) in causes.slice(0, causeCount)" :key="i" :class="$style.errorStage">
+      <div :class="$style.errorRow">
+        <div :class="$style.errorIcon">
+          <slot name="icon" v-if="i === 0">⚠︎</slot>
+          <template v-else>↳</template>
+        </div>
+        <div :class="$style.errorMessage">
+          <slot v-if="i === 0 && $slots.default" />
+          <template v-else>{{ cause.message }}</template>
+        </div>
       </div>
+
+      <div v-if="i === 0 && $slots.pre" :class="$style.preContainer">
+        <slot name="pre" />
+      </div>
+
+      <details v-if="cause.stack && i < causeCount - 1">
+        <summary>Stack trace</summary>
+        <div :class="$style.preContainer">
+          <slot name="stackTrace" v-if="i === 0 && $slots.stackTrace"></slot>
+          <pre v-else>{{ cause.stack }}</pre>
+        </div>
+      </details>
     </div>
-    <div v-if="$slots.pre" :class="$style.preContainer">
-      <slot name="pre" />
-    </div>
-    <div v-if="$slots.actions" :class="$style.actionsContainer">
+
+    <div :class="$style.actionsContainer">
+      <div :class="$style.actionsLeft" v-if="causes.length > 1">
+        <button :disabled="causeCount > causes.length" @click="causeCount++">+</button>
+        <button :disabled="causeCount <= 2" @click="causeCount--">-</button>
+      </div>
+      <div :class="$style.actionsRight"></div>
       <slot name="actions" />
     </div>
   </div>
@@ -69,7 +119,27 @@ const { errorMessage = 'An unknown error occurred.', color = 'red' } = definePro
 
 .actionsContainer {
   display: flex;
-  gap: 1em;
-  justify-content: flex-end;
+  gap: 0.5em;
+  justify-content: space-between;
+
+  &:not(:has(> :not(:empty))) {
+    display: none;
+  }
+
+  .actionsLeft {
+    display: flex;
+    gap: 0.5em;
+    justify-content: start;
+    flex-wrap: wrap;
+    margin-right: auto;
+  }
+
+  .actionsRight {
+    display: flex;
+    gap: 0.5em;
+    justify-content: end;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
 }
 </style>

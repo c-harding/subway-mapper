@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import ErrorBox from './ErrorBox.vue';
 import { BoundedBox, Box, Point, PointOffset } from './geometry';
 import {
   directionOffset,
@@ -7,6 +8,7 @@ import {
   offsetStationPosition,
   type StationPosition,
 } from './layout-strategy';
+import LoadingSpinner from './LoadingSpinner.vue';
 import type { Line, Network } from './model';
 import { completeLayoutConfig } from './model/config';
 import { allDirections, type Direction, type Side } from './model/direction';
@@ -386,99 +388,100 @@ const path = computed(() =>
 );
 </script>
 <template>
-  <svg :viewBox>
-    <template v-if="svgProps.status === 'success'">
-      <g id="safeAreas" v-if="showSafeAreas">
-        <template v-for="pos in svgProps.positions" :key="pos.station.name">
-          <rect
-            v-for="(safeArea, i) in pos.safeAreas"
-            :key="i"
-            :x="safeArea.min.x"
-            :y="safeArea.min.y"
-            :width="safeArea.width"
-            :height="safeArea.height"
-            fill="red"
-            stroke="red"
-            stroke-width="1"
-            fill-opacity="0.2"
-          />
-        </template>
-      </g>
-      <g id="lines-background">
-        <path
-          :d="path"
-          stroke="white"
-          :stroke-width="layoutConfig.lineWidth + layoutConfig.marker.strokeWidth * 2"
-          stroke-linecap="butt"
-          fill="none"
-        />
-      </g>
-      <g id="station-markers-background">
-        <circle
-          v-for="pos in svgProps.positions"
-          :key="pos.station.name"
-          :cx="pos.marker.x"
-          :cy="pos.marker.y"
-          :r="layoutConfig.marker.radius + layoutConfig.marker.strokeWidth * 2"
-          fill="white"
-        />
-      </g>
-      <g id="lines">
-        <path
-          :d="path"
-          :stroke="line.color"
-          :stroke-width="layoutConfig.lineWidth"
-          stroke-linecap="round"
-          fill="none"
-        />
-      </g>
-      <g id="station-markers-line">
-        <circle
-          v-for="pos in svgProps.positions"
-          :key="pos.station.name"
-          :cx="pos.marker.x"
-          :cy="pos.marker.y"
-          :r="layoutConfig.marker.radius + layoutConfig.marker.strokeWidth"
-          fill="black"
-        />
-      </g>
-      <g id="station-markers-fill">
-        <circle
-          v-for="pos in svgProps.positions"
-          :key="pos.station.name"
-          :cx="pos.marker.x"
-          :cy="pos.marker.y"
-          :r="layoutConfig.marker.radius"
-          fill="white"
-        />
-      </g>
-      <g id="station-labels">
-        <text
-          v-for="pos in svgProps.positions"
-          :key="pos.station.name"
-          :x="pos.label.x"
-          :y="pos.label.y"
-          :style="
-            labelStyles({
-              textAnchor: pos.textAnchor,
-              dominantBaseline: pos.dominantBaseline,
-              fontWeight: pos.station.terminus ? 700 : undefined,
-            })
-          "
-        >
-          <tspan
-            v-for="(line, i) in pos.labelLines"
-            :key="line"
-            :x="pos.label.x"
-            :dy="i === 0 ? 0 : (layoutConfig.label.lineHeight ?? layoutConfig.label.fontSize)"
-          >
-            {{ line }}
-          </tspan>
-        </text>
-      </g>
-    </template>
-  </svg>
-  <pre v-if="svgProps.status === 'error'">Error: {{ svgProps.error }}</pre>
-  <p v-if="svgProps.status === 'loading'">Loading...</p>
   <p v-if="svgProps.status === 'empty'">No stations on this line.</p>
+  <ErrorBox v-else-if="svgProps.status === 'error'" :error="svgProps.error" />
+  <ErrorBox v-else-if="svgProps.status === 'loading'" color="#000">
+    Rendering network...
+    <template #icon><LoadingSpinner /></template>
+  </ErrorBox>
+  <svg :viewBox v-else-if="svgProps.status === 'success'">
+    <g id="safeAreas" v-if="showSafeAreas">
+      <template v-for="pos in svgProps.positions" :key="pos.station.name">
+        <rect
+          v-for="(safeArea, i) in pos.safeAreas"
+          :key="i"
+          :x="safeArea.min.x"
+          :y="safeArea.min.y"
+          :width="safeArea.width"
+          :height="safeArea.height"
+          fill="red"
+          stroke="red"
+          stroke-width="1"
+          fill-opacity="0.2"
+        />
+      </template>
+    </g>
+    <g id="lines-background">
+      <path
+        :d="path"
+        stroke="white"
+        :stroke-width="layoutConfig.lineWidth + layoutConfig.marker.strokeWidth * 2"
+        stroke-linecap="butt"
+        fill="none"
+      />
+    </g>
+    <g id="station-markers-background">
+      <circle
+        v-for="pos in svgProps.positions"
+        :key="pos.station.name"
+        :cx="pos.marker.x"
+        :cy="pos.marker.y"
+        :r="layoutConfig.marker.radius + layoutConfig.marker.strokeWidth * 2"
+        fill="white"
+      />
+    </g>
+    <g id="lines">
+      <path
+        :d="path"
+        :stroke="line.color"
+        :stroke-width="layoutConfig.lineWidth"
+        stroke-linecap="round"
+        fill="none"
+      />
+    </g>
+    <g id="station-markers-line">
+      <circle
+        v-for="pos in svgProps.positions"
+        :key="pos.station.name"
+        :cx="pos.marker.x"
+        :cy="pos.marker.y"
+        :r="layoutConfig.marker.radius + layoutConfig.marker.strokeWidth"
+        fill="black"
+      />
+    </g>
+    <g id="station-markers-fill">
+      <circle
+        v-for="pos in svgProps.positions"
+        :key="pos.station.name"
+        :cx="pos.marker.x"
+        :cy="pos.marker.y"
+        :r="layoutConfig.marker.radius"
+        fill="white"
+      />
+    </g>
+    <g id="station-labels">
+      <text
+        v-for="pos in svgProps.positions"
+        :key="pos.station.name"
+        :x="pos.label.x"
+        :y="pos.label.y"
+        :style="
+          labelStyles({
+            textAnchor: pos.textAnchor,
+            dominantBaseline: pos.dominantBaseline,
+            fontWeight: pos.station.terminus ? 700 : undefined,
+          })
+        "
+      >
+        <tspan
+          v-for="(line, i) in pos.labelLines"
+          :key="line"
+          :x="pos.label.x"
+          :dy="i === 0 ? 0 : (layoutConfig.label.lineHeight ?? layoutConfig.label.fontSize)"
+        >
+          {{ line }}
+        </tspan>
+      </text>
+    </g>
+  </svg>
 </template>
