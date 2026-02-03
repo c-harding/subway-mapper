@@ -1,6 +1,7 @@
 import vue from '@vitejs/plugin-vue';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig, PluginOption } from 'vite';
+import checker from 'vite-plugin-checker';
 
 import { joinPathSegments } from './src/util/path';
 
@@ -27,7 +28,11 @@ function reloadPublicAssets(): PluginOption {
 // https://vite.dev/config/
 export default defineConfig({
   base: process.env.VITE_BASE,
-  plugins: [vue(), reloadPublicAssets()],
+  plugins: [
+    vue(),
+    checker({ vueTsc: { tsconfigPath: './tsconfig.app.json' }, typescript: true }),
+    reloadPublicAssets(),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

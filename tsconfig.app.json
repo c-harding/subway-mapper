@@ -8,8 +8,13 @@
     "jsx": "preserve",
     "jsxImportSource": "vue",
 
+    "strict": true,
+
     "paths": {
       "@/*": ["./src/*"]
     }
+  },
+  "vueCompilerOptions": {
+    "strictTemplates": true
   }
 }
