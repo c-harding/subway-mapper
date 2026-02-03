@@ -6,7 +6,9 @@ import LoadingSpinner from './LoadingSpinner.vue';
 import { loadNetwork } from './loadNetwork';
 import NetworkRoot from './NetworkRoot.vue';
 import { delayRef } from './util/delayRef';
+import { joinPathSegments } from './util/path';
 import { svgElementInjectionKey } from './util/svg';
+import { definedFilter } from './util/undefined';
 import { useResource } from './util/useResource';
 
 provide(svgElementInjectionKey, useTemplateRef<SVGSVGElement>('svg'));
@@ -22,8 +24,9 @@ const networks = Object.keys(
   }),
 );
 
-const networkUrl = networks[0] ? new URL('/networks/' + networks[0], document.baseURI) : undefined;
-const mapUrl = maps[0] ? new URL('/maps/' + maps[0], document.baseURI) : undefined;
+const baseUrl = import.meta.env.BASE_URL;
+const networkUrl = networks[0] ? joinPathSegments(baseUrl, 'networks', networks[0]) : undefined;
+const mapUrl = maps[0] ? joinPathSegments(baseUrl, 'maps', maps[0]) : undefined;
 
 const {
   isLoading: loadingNetwork,
@@ -32,7 +35,8 @@ const {
   execute: reloadNetwork,
 } = useResource({
   request: () => (networkUrl ? { networkUrl, mapUrl } : undefined),
-  loader: ({ request }) => loadNetwork(request.networkUrl.toString(), request.mapUrl?.toString()),
+  hotUrls: ({ request }) => [request.networkUrl, request.mapUrl].filter(definedFilter),
+  loader: ({ request }) => loadNetwork(request.networkUrl, request.mapUrl),
 });
 
 const showLoading = delayRef(loadingNetwork, (isLoading) => (isLoading ? 300 : 500));
@@ -47,7 +51,7 @@ const showLoading = delayRef(loadingNetwork, (isLoading) => (isLoading ? 300 : 5
     network JSON file to use Subway Mapper.
   </ErrorBox>
   <ErrorBox v-else-if="networkLoadingError">
-    The network <code>{{ networkUrl.pathname }}</code> could not be loaded, with error:
+    The network <code>{{ networkUrl }}</code> could not be loaded, with error:
     <template #pre>
       <pre>{{
         networkLoadingError instanceof Error
@@ -61,12 +65,12 @@ const showLoading = delayRef(loadingNetwork, (isLoading) => (isLoading ? 300 : 5
   </ErrorBox>
 
   <ErrorBox v-else-if="showLoading" color="#000">
-    Loading network <code>{{ networkUrl.pathname }}</code
+    Loading network <code>{{ networkUrl }}</code
     >...
     <template #icon><LoadingSpinner /></template>
   </ErrorBox>
 
-  <NetworkRoot v-else-if="network" :network="network" :networkUrl :mapUrl />
+  <NetworkRoot v-else-if="network" :network="network" />
 
   <AppFooter :network :networkUrl :mapUrl />
 </template>

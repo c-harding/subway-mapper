@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useTitle } from '@vueuse/core';
 import type { Network } from './model';
+import { definedFilter } from './util/undefined';
 
 const { network, networkUrl, mapUrl } = defineProps<{
   network?: Network;
-  networkUrl?: URL;
-  mapUrl?: URL;
+  networkUrl?: string;
+  mapUrl?: string;
 }>();
 
 const gitHash = import.meta.env.VITE_GIT_HASH;
@@ -19,7 +20,7 @@ useTitle(
   () => `${titlePrefix}${network?.name ? `${network.name} | Subway Mapper` : 'Subway Mapper'}`,
 );
 
-const activeUrls = [networkUrl, mapUrl].filter((url): url is URL => url !== undefined);
+const activeUrls = [networkUrl, mapUrl].filter(definedFilter);
 </script>
 
 <template>
@@ -31,8 +32,8 @@ const activeUrls = [networkUrl, mapUrl].filter((url): url is URL => url !== unde
       <template v-for="(url, i) of activeUrls" :key="i">
         <span :class="$style.inlineBlock"
           >{{ i === 0 ? '(' : ''
-          }}<a :href="url.href" download target="_blank"
-            ><code>{{ url.pathname }}</code></a
+          }}<a :href="url" download target="_blank"
+            ><code>{{ url }}</code></a
           >{{ i === activeUrls.length - 1 ? ')' : ',' }}</span
         >{{ ' ' }}
       </template>

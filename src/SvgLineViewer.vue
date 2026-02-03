@@ -170,7 +170,9 @@ function makeCurve(from: PreviousSegment, to: LineSegmentDetails) {
     radius,
     offset: to.entrance.offsetTo(chosenOffsetOption.continuePoint),
     bounds: chosenOffsetOption.curveBounds,
-    path: `L ${chosenOffsetOption.curveStart.x} ${chosenOffsetOption.curveStart.y} A ${radius} ${radius} 0 0 ${sweepFlag} ${chosenOffsetOption.curveEnd.x} ${chosenOffsetOption.curveEnd.y}`,
+    path:
+      `L ${chosenOffsetOption.curveStart.x} ${chosenOffsetOption.curveStart.y}` +
+      `A ${radius} ${radius} 0 0 ${sweepFlag} ${chosenOffsetOption.curveEnd.x} ${chosenOffsetOption.curveEnd.y}`,
   };
 }
 

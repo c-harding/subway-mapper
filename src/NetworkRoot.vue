@@ -6,8 +6,6 @@ import { useNetworkFonts } from './util/font';
 
 const { network } = defineProps<{
   network: Network;
-  networkUrl: URL;
-  mapUrl?: URL;
 }>();
 
 useNetworkFonts(() => network);
