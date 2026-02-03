@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Network, NetworkDisplay } from './model';
-import { definedFilter } from './util/undefined';
 import { mergeLayoutConfig } from './model/config';
+import { definedFilter } from './util/undefined';
 
 export async function loadNetwork(network: string, map?: string): Promise<Network> {
   return parseNetwork(
@@ -19,9 +19,7 @@ export async function parseNetwork(
     map !== undefined ? map.then((res) => NetworkDisplay.parse(res)) : undefined,
   ]);
 
-  const mergedMap = merge(networkData, mapData);
-  console.log({ mergedMap });
-  return mergedMap;
+  return merge(networkData, mapData);
 }
 
 function merge(network: Network, mapData?: NetworkDisplay): Network {
@@ -39,10 +37,7 @@ function merge(network: Network, mapData?: NetworkDisplay): Network {
       })
       .filter(definedFilter),
 
-    layoutConfig: mergeLayoutConfig(
-      network.layoutConfig ?? {},
-      mapData.layoutConfig ?? {},
-    ),
+    layoutConfig: mergeLayoutConfig(network.layoutConfig ?? {}, mapData.layoutConfig ?? {}),
 
     lineSymbols: {
       ...network.lineSymbols,

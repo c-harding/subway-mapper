@@ -1,6 +1,13 @@
 import { Padding, type PaddingLike } from './Padding';
 import { PointOffset, type PointOffsetLike } from './PointOffset';
 
+export interface DomBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export class Point {
   readonly x: number;
   readonly y: number;
@@ -57,13 +64,7 @@ export class Point {
     });
   }
 
-  withSizeFromBox(box: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    label?: string;
-  }): RangedPoint {
+  withSizeFromBox(box: DomBox, label?: string): RangedPoint {
     return new RangedPoint({
       x: this.x,
       y: this.y,
@@ -71,7 +72,7 @@ export class Point {
       minY: this.y + box.y,
       maxX: this.x + box.x + box.width,
       maxY: this.y + box.y + box.height,
-      label: box.label,
+      label,
     });
   }
 

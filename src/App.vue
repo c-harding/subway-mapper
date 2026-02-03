@@ -7,7 +7,7 @@ import { loadNetwork } from './loadNetwork';
 import NetworkRoot from './NetworkRoot.vue';
 import { delayRef } from './util/delayRef';
 import { joinPathSegments } from './util/path';
-import { svgElementInjectionKey } from './util/svg';
+import { MemorySvgSizeCache, svgElementInjectionKey, svgSizeCacheInjectionKey } from './util/svg';
 import { definedFilter } from './util/undefined';
 import { useResource } from './util/useResource';
 
@@ -27,6 +27,8 @@ const networks = Object.keys(
 const baseUrl = import.meta.env.BASE_URL;
 const networkUrl = networks[0] ? joinPathSegments(baseUrl, 'networks', networks[0]) : undefined;
 const mapUrl = maps[0] ? joinPathSegments(baseUrl, 'maps', maps[0]) : undefined;
+
+provide(svgSizeCacheInjectionKey, new MemorySvgSizeCache());
 
 const {
   isLoading: loadingNetwork,
