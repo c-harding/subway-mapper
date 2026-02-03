@@ -3,6 +3,50 @@
     "font": "google-fonts:Asap:ital,wdth,wght@0,98,100..900",
     "lines": [
         {
+            "name": "S2",
+            "color": "#71BF44",
+            "overlayColor": "#ffffff",
+            "directions": [
+                {
+                    "start": "Petershausen",
+                    "end": "Obermenzing",
+                    "direction": "s"
+                },
+                {
+                    "direction": "se"
+                },
+                {
+                    "start": "Laim",
+                    "end": "Ostbahnhof",
+                    "direction": "e"
+                },
+                {
+                    "start": "Leuchtenbergring",
+                    "end": "Leuchtenbergring",
+                    "direction": "ne"
+                },
+                {
+                    "start": "Berg am Laim",
+                    "end": "Berg am Laim",
+                    "direction": "e"
+                },
+                {
+                    "start": "Riem",
+                    "end": "Riem",
+                    "direction": "ne"
+                },
+                {
+                    "start": "Feldkirchen",
+                    "end": "Markt Schwaben",
+                    "direction": "e"
+                },
+                {
+                    "end": "Erding",
+                    "direction": "n"
+                }
+            ]
+        },
+        {
             "name": "U3",
             "color": "#ec6725",
             "overlayColor": "#ffffff",
@@ -84,7 +128,15 @@
             "height": 100,
             "font": "google-fonts:Hind:wght@600",
             "fontSize": 100,
-            "baseLineShift": -15
+            "baseLineShift": -10
+        },
+        "S-Bahn": {
+            "shape": "pill",
+            "width": 200,
+            "height": 100,
+            "font": "google-fonts:Inter:wght@700",
+            "fontSize": 100,
+            "baseLineShift": -4
         }
     },
     "layoutConfig": {
