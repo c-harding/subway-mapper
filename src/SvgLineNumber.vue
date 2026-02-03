@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computedAsync } from '@vueuse/core';
 import { computed } from 'vue';
 import type { Line, Network } from './model';
 import { getFontName } from './util/font';
@@ -32,9 +33,9 @@ const labelStyles = computed(
 
 const svgMeasurement = useSvgMeasurement();
 
-const textBBox = computed(() => svgMeasurement.textBBox(line.name, labelStyles.value));
+const textBBox = computedAsync(() => svgMeasurement.textBBox(line.name, labelStyles.value));
 
-const textHeight = computed(() => svgMeasurement.textHeight(line.name, labelStyles.value));
+const textHeight = computedAsync(() => svgMeasurement.textHeight(line.name, labelStyles.value), 0);
 
 const height = computed(() => {
   if (!textBBox.value) {

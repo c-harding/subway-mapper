@@ -4,6 +4,7 @@ import type { BoxInput } from './geometry/Point';
 import { Line, type Station } from './model';
 import type { LayoutConfig } from './model/config';
 import { allDirections, allSides, type Direction, type Side } from './model/direction';
+import { asyncFlatMap, asyncMap } from './util/promise';
 import { range } from './util/range';
 import type { TextBox } from './util/svg';
 
@@ -95,7 +96,7 @@ export interface GetPositionsProps {
       textAnchor?: 'start' | 'middle' | 'end';
       dominantBaseline?: 'hanging' | 'middle' | 'alphabetic';
     },
-  ) => TextBox[];
+  ) => Promise<TextBox[]>;
 }
 
 interface LayoutStrategyGetPositionsProps extends GetPositionsProps {
@@ -104,13 +105,13 @@ interface LayoutStrategyGetPositionsProps extends GetPositionsProps {
 
 export interface LayoutStrategy {
   direction: Direction[];
-  getPositions(props: LayoutStrategyGetPositionsProps): StationPosition[];
+  getPositions(props: LayoutStrategyGetPositionsProps): Promise<StationPosition[]>;
 }
 
 const layoutStrategies: Record<string, LayoutStrategy> = {
   vertical: {
     direction: ['n', 's'],
-    getPositions({ station, direction, side, layoutConfig, getLabelBoxes }) {
+    async getPositions({ station, direction, side, layoutConfig, getLabelBoxes }) {
       const labelDirection = directionOffset(direction, side);
 
       const textAnchor = labelDirection.dx < 0 ? 'end' : 'start';
@@ -119,7 +120,7 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
         height: totalStationHeight(layoutConfig),
       });
 
-      const labelBoxes = getLabelBoxes(station, { textAnchor });
+      const labelBoxes = await getLabelBoxes(station, { textAnchor });
       return labelBoxes.map((labelBox): StationPosition => {
         const label = new Point({
           x:
@@ -160,14 +161,14 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
   },
   horizontal: {
     direction: ['e', 'w'],
-    getPositions({ station, direction, side, layoutConfig, getLabelBoxes }) {
+    async getPositions({ station, direction, side, layoutConfig, getLabelBoxes }) {
       const labelDirection = directionOffset(direction, side);
       const marker = Point.ORIGIN.withSize({
         width: totalStationWidth(layoutConfig),
         height: totalStationHeight(layoutConfig),
       });
 
-      const labelBoxes = getLabelBoxes(station);
+      const labelBoxes = await getLabelBoxes(station);
       return labelBoxes.map((labelBox): StationPosition => {
         const label = new Point({
           x: marker.x,
@@ -215,7 +216,7 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
   },
   diagonal: {
     direction: ['ne', 'nw', 'se', 'sw'],
-    getPositions({ station, direction, side, layoutConfig, getLabelBoxes }) {
+    async getPositions({ station, direction, side, layoutConfig, getLabelBoxes }) {
       const labelDirection = directionOffset(direction, side);
 
       const textAnchor = labelDirection.dx < 0 ? 'end' : 'start';
@@ -226,7 +227,7 @@ const layoutStrategies: Record<string, LayoutStrategy> = {
         height: totalStationHeight(layoutConfig) / Math.SQRT2,
       });
 
-      const labelBoxes = getLabelBoxes(station, { textAnchor, dominantBaseline });
+      const labelBoxes = await getLabelBoxes(station, { textAnchor, dominantBaseline });
       return labelBoxes.map((labelBox): StationPosition => {
         const label = new Point({
           x:
@@ -300,20 +301,23 @@ function getSideFromLabelPosition(
   return index > 0 ? ['right'] : ['left'];
 }
 
-function getPositions(props: GetPositionsProps) {
-  return Object.entries(layoutStrategies)
-    .filter(([, strategy]) => strategy.direction.includes(props.direction))
-    .flatMap(([, strategy]) => {
+async function getPositions(props: GetPositionsProps): Promise<StationPosition[]> {
+  return asyncFlatMap(
+    Object.values(layoutStrategies).filter((strategy) =>
+      strategy.direction.includes(props.direction),
+    ),
+    async (strategy) => {
       const sides = props.side
         ? [props.side]
         : getSideFromLabelPosition(props.direction, props.line.labelPositions[props.station.name]);
-      return sides.flatMap((side) =>
+      return asyncFlatMap(sides, async (side) =>
         strategy.getPositions({
           ...props,
           side,
         }),
       );
-    });
+    },
+  );
 }
 
 interface LayoutLineProps extends Omit<GetPositionsProps, 'station'> {
@@ -324,27 +328,29 @@ interface LayoutLineProps extends Omit<GetPositionsProps, 'station'> {
   conflicts?: { [end in 'start' | 'end']?: readonly Side[] };
 }
 
-export function layoutLine(props: LayoutLineProps): readonly StationPosition[] {
+export async function layoutLine(props: LayoutLineProps): Promise<readonly StationPosition[]> {
   const lineDirection = directionOffset(props.direction);
 
-  const stationPositionOptions = props.stations.map((station) =>
+  const stationPositionOptions = await asyncMap(props.stations, (station) =>
     getPositions({
       ...props,
       station,
     }),
   );
 
-  const maxLineCount = Math.max(
-    ...stationPositionOptions.map((options) =>
-      Math.max(...options.map((option) => option.labelLines.length)),
+  const [maxLineCount, minLineCount] = await Promise.all([
+    Math.max(
+      ...stationPositionOptions.map((options) =>
+        Math.max(...options.map((option) => option.labelLines.length)),
+      ),
     ),
-  );
 
-  const minLineCount = Math.min(
-    ...stationPositionOptions.map((options) =>
-      Math.min(...options.map((option) => option.labelLines.length)),
+    Math.min(
+      ...stationPositionOptions.map((options) =>
+        Math.min(...options.map((option) => option.labelLines.length)),
+      ),
     ),
-  );
+  ]);
 
   let positions: ReduceStep | null = null;
   for (const lineLimit of range(minLineCount, maxLineCount + 1)) {

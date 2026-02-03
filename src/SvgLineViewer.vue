@@ -16,23 +16,24 @@ import { allDirections, type Direction, type Side } from './model/direction';
 import type { DirectionSegment } from './model/line';
 import { getFontName } from './util/font';
 import { hyphenations } from './util/hyphenation';
+import { asyncMap } from './util/promise';
 import { modularRangeInclusive } from './util/range';
 import { useSvgMeasurement } from './util/svg';
+import { useResource } from './util/useResource';
 
-const { network, line, direction, initialSide, forceSide, compact, maxWidth, maxHeight } =
-  defineProps<{
-    network: Network;
-    line: Line;
-    showSafeAreas?: boolean;
-    direction: Direction;
-    initialSide: Side;
-    forceSide?: boolean;
-    compact?: boolean;
-    maxWidth?: number;
-    maxHeight?: number;
-  }>();
+const props = defineProps<{
+  network: Network;
+  line: Line;
+  showSafeAreas?: boolean;
+  direction: Direction;
+  initialSide: Side;
+  forceSide?: boolean;
+  compact?: boolean;
+  maxWidth?: number;
+  maxHeight?: number;
+}>();
 
-const layoutConfig = computed(() => completeLayoutConfig(network.layoutConfig ?? {}));
+const layoutConfig = computed(() => completeLayoutConfig(props.network.layoutConfig ?? {}));
 
 interface PreviousSegment {
   direction: Direction;
@@ -188,7 +189,7 @@ function makeCurve(from: PreviousSegment, to: LineSegmentDetails) {
   };
 }
 
-const fontFamily = computed(() => network.font && getFontName(network.font));
+const fontFamily = computed(() => props.network.font && getFontName(props.network.font));
 
 function labelStyles(props?: {
   textAnchor?: 'start' | 'middle' | 'end';
@@ -221,8 +222,11 @@ interface LineSegmentDetails {
   direction: Direction;
 }
 
-function layoutLineSegment(segment: DirectionSegment): LineSegmentDetails {
-  const resolvedDirection = segment.direction ?? direction;
+async function layoutLineSegment(
+  segment: DirectionSegment,
+  mapProps: MapProps,
+): Promise<LineSegmentDetails> {
+  const resolvedDirection = segment.direction ?? mapProps.direction;
 
   if (segment.stations.length === 0) {
     const point = new Point(0, 0);
@@ -235,20 +239,20 @@ function layoutLineSegment(segment: DirectionSegment): LineSegmentDetails {
     };
   }
 
-  const positions = layoutLine({
+  const positions = await layoutLine({
     stations: segment.stations,
-    line,
-    initialSide,
-    side: forceSide ? initialSide : undefined,
+    line: mapProps.line,
+    initialSide: mapProps.initialSide,
+    side: mapProps.forceSide ? mapProps.initialSide : undefined,
     direction: resolvedDirection,
-    layoutConfig: layoutConfig.value,
-    debugDescription: line.name,
-    compact,
-    bounds: new BoundedBox({ maxWidth, maxHeight }),
+    layoutConfig: mapProps.layoutConfig,
+    debugDescription: mapProps.line.name,
+    compact: mapProps.compact,
+    bounds: new BoundedBox({ maxWidth: mapProps.maxWidth, maxHeight: mapProps.maxHeight }),
     getLabelBoxes: (station, props) =>
       svgMeasurement.textBBoxes(
-        hyphenations(station.name, network.hyphenation),
-        layoutConfig.value.label.lineHeight ?? layoutConfig.value.label.fontSize,
+        hyphenations(station.name, mapProps.network.hyphenation),
+        mapProps.layoutConfig.label.lineHeight ?? mapProps.layoutConfig.label.fontSize,
         labelStyles({
           textAnchor: props?.textAnchor,
           fontWeight: station.terminus ? 700 : undefined,
@@ -284,20 +288,40 @@ interface CarriedCurve {
   bounds: Box[];
 }
 
-const svgProps = computed(
-  ():
-    | { status: 'loading' }
-    | { status: 'success'; positions: readonly StationPositionWithCurve[]; bounds: Box }
-    | { status: 'empty' }
-    | { status: 'error'; error: unknown } => {
-    if (!svgMeasurement.ready.value) {
-      return { status: 'loading' };
-    }
+interface MapProps {
+  layoutConfig: ReturnType<typeof completeLayoutConfig>;
+  fontFamily: string | undefined;
+  network: Network;
+  line: Line;
+  direction: Direction;
+  initialSide: Side;
+  forceSide: boolean;
+  compact: boolean;
+  maxWidth: number | undefined;
+  maxHeight: number | undefined;
+}
 
-    if (line.stations.length === 0) {
-      return { status: 'empty' };
-    }
-
+const {
+  state: map,
+  error: mapError,
+  isLoading: mapIsLoading,
+} = useResource({
+  request: (): MapProps | undefined =>
+    svgMeasurement.ready.value && props.line.stations.length > 0
+      ? {
+          layoutConfig: layoutConfig.value,
+          fontFamily: fontFamily.value,
+          network: props.network,
+          line: props.line,
+          direction: props.direction,
+          initialSide: props.initialSide,
+          forceSide: props.forceSide,
+          compact: props.compact,
+          maxWidth: props.maxWidth,
+          maxHeight: props.maxHeight,
+        }
+      : undefined,
+  async loader({ request }) {
     try {
       interface ReduceStep {
         positions: readonly StationPositionWithCurve[];
@@ -306,96 +330,93 @@ const svgProps = computed(
         bounds: Box;
       }
 
-      const laidOutSegments = line.directionSegments
-        .map((segment) => layoutLineSegment(segment))
-        .reduce((acc, segment): ReduceStep => {
-          if (!acc) {
-            if (segment.positions.length === 0) {
-              throw new Error('First segment has no stations');
-            }
-            return {
-              positions: segment.positions,
-              prevSegment: {
-                direction: segment.direction,
-                point: segment.exit,
-                safeAreas: segment.positions.flatMap((pos) => pos.safeAreas),
-              },
-              carriedCurve: undefined,
-              bounds: segment.bounds,
-            };
-          }
-          const curve = makeCurve(acc.prevSegment, segment);
-          const adjustedPositions = segment.positions.map<StationPositionWithCurve>((pos) =>
-            offsetStationPosition(pos, curve.offset),
-          );
-          let carriedCurve: CarriedCurve | undefined;
-          if (adjustedPositions.length > 0) {
-            adjustedPositions[0]!.curveBefore = (acc.carriedCurve?.path ?? '') + curve.path;
-            adjustedPositions[0]!.safeAreas = adjustedPositions[0]!.safeAreas.concat(
-              acc.carriedCurve?.bounds ?? [],
-              curve.bounds,
-            );
-          } else {
-            // No stations in this segment; carry the curve forward to the next segment.
-            carriedCurve = {
-              path: (acc.carriedCurve?.path ?? '') + curve.path,
-              bounds: [...(acc.carriedCurve?.bounds ?? []), curve.bounds],
-            };
+      const laidOutSegments = (
+        await asyncMap(request.line.directionSegments, (segment) =>
+          layoutLineSegment(segment, request),
+        )
+      ).reduce((acc, segment): ReduceStep => {
+        if (!acc) {
+          if (segment.positions.length === 0) {
+            throw new Error('First segment has no stations');
           }
           return {
-            positions: [...acc.positions, ...adjustedPositions],
+            positions: segment.positions,
             prevSegment: {
               direction: segment.direction,
-              point: segment.exit.offset(curve.offset),
-              safeAreas: segment.positions
-                .flatMap((pos) => pos.safeAreas)
-                .map((box) => box.offset(curve.offset)),
+              point: segment.exit,
+              safeAreas: segment.positions.flatMap((pos) => pos.safeAreas),
             },
-            carriedCurve,
-            bounds: Box.bounds(acc.bounds, segment.bounds.offset(curve.offset), curve.bounds),
+            carriedCurve: undefined,
+            bounds: segment.bounds,
           };
-        }, undefined)!;
+        }
+        const curve = makeCurve(acc.prevSegment, segment);
+        const adjustedPositions = segment.positions.map<StationPositionWithCurve>((pos) =>
+          offsetStationPosition(pos, curve.offset),
+        );
+        let carriedCurve: CarriedCurve | undefined;
+        if (adjustedPositions.length > 0) {
+          adjustedPositions[0]!.curveBefore = (acc.carriedCurve?.path ?? '') + curve.path;
+          adjustedPositions[0]!.safeAreas = adjustedPositions[0]!.safeAreas.concat(
+            acc.carriedCurve?.bounds ?? [],
+            curve.bounds,
+          );
+        } else {
+          // No stations in this segment; carry the curve forward to the next segment.
+          carriedCurve = {
+            path: (acc.carriedCurve?.path ?? '') + curve.path,
+            bounds: [...(acc.carriedCurve?.bounds ?? []), curve.bounds],
+          };
+        }
+        return {
+          positions: [...acc.positions, ...adjustedPositions],
+          prevSegment: {
+            direction: segment.direction,
+            point: segment.exit.offset(curve.offset),
+            safeAreas: segment.positions
+              .flatMap((pos) => pos.safeAreas)
+              .map((box) => box.offset(curve.offset)),
+          },
+          carriedCurve,
+          bounds: Box.bounds(acc.bounds, segment.bounds.offset(curve.offset), curve.bounds),
+        };
+      }, undefined)!;
 
       return {
-        status: 'success',
         positions: laidOutSegments.positions,
         bounds: laidOutSegments.bounds,
       };
     } catch (error) {
-      console.error(`Error laying out line ${line.name}:`, error);
-      return { status: 'error', error };
+      throw new Error(`Error laying out line ${request.line.name}`, { cause: error });
     }
   },
-);
+});
 
 const viewBox = computed(() => {
-  if (svgProps.value.status !== 'success') {
+  if (!map.value) {
     return undefined;
   }
 
-  const padded = svgProps.value.bounds.withPadding(layoutConfig.value.padding);
-
+  const padded = map.value.bounds.withPadding(layoutConfig.value.padding);
   return `${padded.min.x} ${padded.min.y} ${padded.width} ${padded.height}`;
 });
 
 const path = computed(() =>
-  svgProps.value.status === 'success'
-    ? svgProps.value.positions
-        .map((pos, i) => `${pos.curveBefore ?? ''}${i ? 'L' : 'M'}${pos.marker.x},${pos.marker.y}`)
-        .join('')
-    : undefined,
+  map.value?.positions
+    .map((pos, i) => `${pos.curveBefore ?? ''}${i ? 'L' : 'M'}${pos.marker.x},${pos.marker.y}`)
+    .join(''),
 );
 </script>
 <template>
-  <p v-if="svgProps.status === 'empty'">No stations on this line.</p>
-  <ErrorBox v-else-if="svgProps.status === 'error'" :error="svgProps.error" />
-  <ErrorBox v-else-if="svgProps.status === 'loading'" color="#000">
+  <p v-if="line.stations.length === 0">No stations on this line.</p>
+  <ErrorBox v-else-if="mapError" :error="mapError" />
+  <ErrorBox v-else-if="mapIsLoading" color="#000">
     Rendering network...
     <template #icon><LoadingSpinner /></template>
   </ErrorBox>
-  <svg :viewBox v-else-if="svgProps.status === 'success'">
+  <svg :viewBox v-else-if="map">
     <g id="safeAreas" v-if="showSafeAreas">
-      <template v-for="pos in svgProps.positions" :key="pos.station.name">
+      <template v-for="pos in map.positions" :key="pos.station.name">
         <rect
           v-for="(safeArea, i) in pos.safeAreas"
           :key="i"
@@ -421,7 +442,7 @@ const path = computed(() =>
     </g>
     <g id="station-markers-background">
       <circle
-        v-for="pos in svgProps.positions"
+        v-for="pos in map.positions"
         :key="pos.station.name"
         :cx="pos.marker.x"
         :cy="pos.marker.y"
@@ -440,7 +461,7 @@ const path = computed(() =>
     </g>
     <g id="station-markers-line">
       <circle
-        v-for="pos in svgProps.positions"
+        v-for="pos in map.positions"
         :key="pos.station.name"
         :cx="pos.marker.x"
         :cy="pos.marker.y"
@@ -450,7 +471,7 @@ const path = computed(() =>
     </g>
     <g id="station-markers-fill">
       <circle
-        v-for="pos in svgProps.positions"
+        v-for="pos in map.positions"
         :key="pos.station.name"
         :cx="pos.marker.x"
         :cy="pos.marker.y"
@@ -460,7 +481,7 @@ const path = computed(() =>
     </g>
     <g id="station-labels">
       <text
-        v-for="pos in svgProps.positions"
+        v-for="pos in map.positions"
         :key="pos.station.name"
         :x="pos.label.x"
         :y="pos.label.y"

@@ -2,40 +2,47 @@ import type { DomBox } from '@/geometry/Point';
 import stableStringify from 'json-stable-stringify';
 import { computed, inject, type InjectionKey, type ShallowRef } from 'vue';
 import { fontsLoaded } from './font';
+import { asyncMap } from './promise';
 
 const svgns = 'http://www.w3.org/2000/svg';
 
+type MaybePromise<T> = T | Promise<T>;
+
 export abstract class SvgSizeCache {
-  abstract get(styles: object, text: string): DomBox | undefined;
-  protected abstract set(styles: object, text: string, box: DomBox): void;
-  getOrCalculate(styles: object, text: string, calculate: () => DomBox): DomBox {
-    const cached = this.get(styles, text);
+  abstract get(styles: object, text: string): Promise<DomBox | undefined>;
+  protected abstract set(styles: object, text: string, box: Promise<DomBox>): Promise<void>;
+  async getOrCalculate(
+    styles: object,
+    text: string,
+    calculate: () => MaybePromise<DomBox>,
+  ): Promise<DomBox> {
+    const cached = await this.get(styles, text);
     if (cached) {
       return cached;
     }
-    const box = calculate();
-    this.set(styles, text, box);
-    return box;
+    const boxPromise = calculate();
+    await this.set(styles, text, Promise.resolve(boxPromise));
+    return await boxPromise;
   }
 
-  static getOrCalculate(
+  static async getOrCalculate(
     sizeCache: SvgSizeCache | undefined,
     styles: object,
     text: string,
-    calculate: () => DomBox,
-  ): DomBox {
+    calculate: () => MaybePromise<DomBox>,
+  ): Promise<DomBox> {
     if (sizeCache) {
       return sizeCache.getOrCalculate(styles, text, calculate);
     } else {
-      return calculate();
+      return await calculate();
     }
   }
 }
 
 export class MemorySvgSizeCache extends SvgSizeCache {
-  private readonly cache = new Map<string, Map<string, DomBox>>();
+  private readonly cache = new Map<string, Map<string, DomBox | Promise<DomBox>>>();
 
-  override get(styles: object, text: string) {
+  override async get(styles: object, text: string) {
     const key = stableStringify(styles);
     if (!key) {
       throw new Error('Failed to stringify styles for text measurement cache key');
@@ -44,7 +51,11 @@ export class MemorySvgSizeCache extends SvgSizeCache {
     return styleCache?.get(text);
   }
 
-  protected override set(styles: object, text: string, box: DomBox): void {
+  protected override async set(
+    styles: object,
+    text: string,
+    boxPromise: Promise<DomBox>,
+  ): Promise<void> {
     const key = stableStringify(styles);
     if (!key) {
       throw new Error('Failed to stringify styles for text measurement cache key');
@@ -54,16 +65,17 @@ export class MemorySvgSizeCache extends SvgSizeCache {
       styleCache = new Map();
       this.cache.set(key, styleCache);
     }
-    styleCache.set(text, box);
+    styleCache.set(text, boxPromise);
+    boxPromise.then((box) => styleCache.set(text, box));
   }
 }
 
-function measureTextBBox(
+async function measureTextBBox(
   svg: SVGSVGElement,
   text: string,
   styles: object,
   sizeCache: SvgSizeCache | undefined,
-): DomBox {
+): Promise<DomBox> {
   return SvgSizeCache.getOrCalculate(sizeCache, styles, text, () => {
     const data = document.createTextNode(text);
 
@@ -123,13 +135,13 @@ function findBestWrapping(textLengths: TextLengthInfo[]): TextLengthInfo {
   return best[0]!;
 }
 
-function measureTextBBoxes(
+async function measureTextBBoxes(
   svg: SVGSVGElement,
   texts: string[],
   lineHeight: number,
   styles: object,
   sizeCache: SvgSizeCache | undefined,
-): TextBox[] {
+): Promise<TextBox[]> {
   const stringsByLineCount = new Map<number, string[][]>();
 
   for (const text of texts) {
@@ -142,9 +154,11 @@ function measureTextBBoxes(
 
   sizeCache ??= new MemorySvgSizeCache();
 
-  return Array.from(stringsByLineCount.values(), (texts): TextBox => {
-    const textLengths = texts.map((lines): TextLengthInfo => {
-      const lineBoxes = lines.map((line) => measureTextBBox(svg, line, styles, sizeCache));
+  const results = await asyncMap(stringsByLineCount.values(), async (texts): Promise<TextBox> => {
+    const textLengths = await asyncMap(texts, async (lines): Promise<TextLengthInfo> => {
+      const lineBoxes = await asyncMap(lines, (line) =>
+        measureTextBBox(svg, line, styles, sizeCache),
+      );
       const lineWidths = lineBoxes.map((box) => box.width);
       const totalHeight =
         lineHeight * (lineBoxes.length - 1) -
@@ -168,28 +182,22 @@ function measureTextBBoxes(
       x: xPos,
       y: bestWrapping.lineBoxes[0]!.y,
     };
-  }).sort((a, b) => a.lines.length - b.lines.length);
+  });
+  return results.sort((a, b) => a.lines.length - b.lines.length);
 }
 
-function measureTextHeight(
+async function measureTextHeight(
   svg: SVGSVGElement,
   text: string,
   styles: object,
   sizeCache: SvgSizeCache | undefined,
 ) {
-  const bottomAlignedBbox = measureTextBBox(
-    svg,
-    text,
-    { ...styles, dominantBaseline: 'alphabetic' },
-    sizeCache,
-  );
-  const topAlignedBbox = measureTextBBox(
-    svg,
-    text,
-    { ...styles, dominantBaseline: 'hanging' },
-    sizeCache,
-  );
-  return topAlignedBbox.y - bottomAlignedBbox.y;
+  const [bottomAlignedBBox, topAlignedBBox] = await Promise.all([
+    measureTextBBox(svg, text, { ...styles, dominantBaseline: 'alphabetic' }, sizeCache),
+    measureTextBBox(svg, text, { ...styles, dominantBaseline: 'hanging' }, sizeCache),
+  ]);
+
+  return topAlignedBBox.y - bottomAlignedBBox.y;
 }
 
 export const svgElementInjectionKey = Symbol('svgElementInjectionKey') as InjectionKey<
@@ -217,11 +225,11 @@ export function useSvgMeasurement({ suppressCacheWarning = false } = {}) {
   const ready = computed(() => svg.value !== null && fontsLoaded.value);
   return {
     ready,
-    textBBox: (text: string, styles: object) =>
+    textBBox: async (text: string, styles: object) =>
       ready.value ? measureTextBBox(svg.value!, text, styles, sizeCache) : null,
-    textBBoxes: (texts: string[], lineHeight: number, styles: object) =>
+    textBBoxes: async (texts: string[], lineHeight: number, styles: object): Promise<TextBox[]> =>
       ready.value ? measureTextBBoxes(svg.value!, texts, lineHeight, styles, sizeCache) : [],
-    textHeight: (text: string, styles: object) =>
+    textHeight: async (text: string, styles: object) =>
       ready.value ? measureTextHeight(svg.value!, text, styles, sizeCache) : 0,
   };
 }
