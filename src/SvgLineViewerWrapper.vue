@@ -28,6 +28,7 @@ const chosenLine = computed(() => network.lines.find((line) => line.name === lin
 
 const initialSide = useEnumSearchParam('initialSide', allSides, 'left');
 const forceSide = useBooleanSearchParam('forceSide', false);
+const forceDirection = useBooleanSearchParam('forceDirection', false);
 const direction = useEnumSearchParam('direction', allDirections, 's');
 const compact = useBooleanSearchParam('compact', false);
 const maxWidth = useNumberSearchParam('maxWidth');
@@ -55,21 +56,27 @@ const directionGrid: (Direction | '.')[][] = [
 </script>
 <template>
   <div :class="$style.controlRow">
-    <table>
-      <tr v-for="(row, rowIndex) of directionGrid" :key="rowIndex">
-        <td v-for="(cell, cellIndex) of row" :key="cellIndex" :style="{ textAlign: 'center' }">
-          <input
-            v-if="cell !== '.'"
-            type="radio"
-            name="direction"
-            :checked="cell === direction"
-            :value="cell"
-            @change="direction = cell"
-          />
-          <span v-else>{{ directionArrow }}</span>
-        </td>
-      </tr>
-    </table>
+    <div :class="$style.controlColumn">
+      <label>
+        <input type="checkbox" v-model="forceDirection" />
+        Force direction
+      </label>
+      <table>
+        <tr v-for="(row, rowIndex) of directionGrid" :key="rowIndex">
+          <td v-for="(cell, cellIndex) of row" :key="cellIndex" :style="{ textAlign: 'center' }">
+            <input
+              v-if="cell !== '.'"
+              type="radio"
+              name="direction"
+              :checked="cell === direction"
+              :value="cell"
+              @change="direction = cell"
+            />
+            <span v-else>{{ directionArrow }}</span>
+          </td>
+        </tr>
+      </table>
+    </div>
     <div :class="$style.controlColumn">
       <label>
         <input type="checkbox" v-model="forceSide" />
@@ -120,6 +127,7 @@ const directionGrid: (Direction | '.')[][] = [
     :direction
     :initialSide
     :forceSide
+    :forceDirection
     :compact
     :maxWidth="maxWidth || undefined"
     :maxHeight="maxHeight || undefined"
@@ -142,6 +150,10 @@ p.lineSelection {
   .controlColumn {
     display: flex;
     flex-direction: column;
+
+    > table {
+      align-self: center;
+    }
   }
 }
 </style>

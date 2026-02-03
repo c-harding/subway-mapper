@@ -28,6 +28,7 @@ const props = defineProps<{
   direction: Direction;
   initialSide: Side;
   forceSide?: boolean;
+  forceDirection?: boolean;
   compact?: boolean;
   maxWidth?: number;
   maxHeight?: number;
@@ -226,7 +227,8 @@ async function layoutLineSegment(
   segment: DirectionSegment,
   mapProps: MapProps,
 ): Promise<LineSegmentDetails> {
-  const resolvedDirection = segment.direction ?? mapProps.direction;
+  const resolvedDirection =
+    (mapProps.forceDirection ? undefined : segment.direction) ?? mapProps.direction;
 
   if (segment.stations.length === 0) {
     const point = new Point(0, 0);
@@ -296,6 +298,7 @@ interface MapProps {
   direction: Direction;
   initialSide: Side;
   forceSide: boolean;
+  forceDirection: boolean;
   compact: boolean;
   maxWidth: number | undefined;
   maxHeight: number | undefined;
@@ -316,6 +319,7 @@ const {
           direction: props.direction,
           initialSide: props.initialSide,
           forceSide: props.forceSide,
+          forceDirection: props.forceDirection,
           compact: props.compact,
           maxWidth: props.maxWidth,
           maxHeight: props.maxHeight,
