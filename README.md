@@ -23,12 +23,12 @@ A project for creating subway maps in SVG, implemented in Vue 3.
   - [x] Initially, allow the user to specify a target length for the line
   - [ ] Later, optimize for overall map layout
 - [x] Support diagonals in line segments
-- [ ] Support different angles per line segment
+- [x] Support different angles per line segment
   - [ ] Consider how to represent in data model, particularly with support for multiple lines sharing segments
     - [ ] Ideally keep this independent of the base line information
-    - [ ] One file for line information, one file for layout information
-    - [ ] Move font information to layout file?
-  - [ ] Consider how to perform two corners between segments
+    - [x] One file for line information, one file for layout information
+    - [x] Move font information to layout file?
+  - [x] Consider how to perform two corners between segments
   - [ ] Consider how to add station labels at corners
 - [ ] Support parallel lines
   - [ ] Consider how to represent in data model
